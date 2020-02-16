@@ -12,7 +12,6 @@ import (
     "encoding"
     "fmt"
     "strconv"
-    "unsafe"
 )
 
 func Scan(s string, v interface{}) error {
@@ -24,7 +23,7 @@ func Scan(s string, v interface{}) error {
         *v = s
         return nil
     case *[]byte:
-        *v = *(*[]byte)(unsafe.Pointer(&s))
+        *v = []byte(s)
         return nil
     case *bool:
         switch s {
@@ -122,7 +121,7 @@ func Scan(s string, v interface{}) error {
         return nil
 
     case encoding.BinaryUnmarshaler:
-        return v.UnmarshalBinary(*(*[]byte)(unsafe.Pointer(&s)))
+        return v.UnmarshalBinary([]byte(s))
 
     default:
         return fmt.Errorf("zstr: 无法解码 %T, 考虑为它实现encoding.BinaryUnmarshaler接口", v)
