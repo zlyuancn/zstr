@@ -33,9 +33,9 @@ func (m *String) Bytes() []byte {
 }
 func (m *String) Bool() (bool, error) {
     switch m.val {
-    case "1", "t", "T", "true", "TRUE", "True", "YES", "yes", "Yes", "y", "ON", "on", "On":
+    case "1", "t", "T", "true", "TRUE", "True", "y", "Y", "yes", "YES", "Yes", "on", "ON", "On":
         return true, nil
-    case "0", "f", "F", "false", "FALSE", "False", "NO", "no", "No", "n", "OFF", "off", "Off":
+    case "0", "f", "F", "false", "FALSE", "False", "n", "N", "no", "NO", "No", "off", "OFF", "Off":
         return false, nil
     }
     return false, fmt.Errorf("数据\"%s\"无法转换为bool", m.val)
