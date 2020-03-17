@@ -11,7 +11,6 @@ package zstr
 import (
     "fmt"
     "strconv"
-    "unsafe"
 )
 
 type String struct {
@@ -29,7 +28,7 @@ func (m *String) Val() string {
     return m.val
 }
 func (m *String) Bytes() []byte {
-    return *(*[]byte)(unsafe.Pointer(&m.val))
+    return []byte(m.val)
 }
 func (m *String) Bool() (bool, error) {
     switch m.val {
