@@ -27,7 +27,7 @@ func Scan(s string, v interface{}) error {
         return nil
     case *bool:
         switch s {
-        case "1", "t", "T", "true", "TRUE", "True", "y", "Y", "yes", "YES", "Yes", "on", "ON", "On":
+        case "1", "t", "T", "true", "TRUE", "True", "y", "Y", "yes", "YES", "Yes", "on", "ON", "On", "ok", "OK", "Ok":
             *v = true
             return nil
         case "0", "f", "F", "false", "FALSE", "False", "n", "N", "no", "NO", "No", "off", "OFF", "Off":

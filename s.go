@@ -32,7 +32,7 @@ func (m *String) Bytes() []byte {
 }
 func (m *String) Bool() (bool, error) {
     switch m.val {
-    case "1", "t", "T", "true", "TRUE", "True", "y", "Y", "yes", "YES", "Yes", "on", "ON", "On":
+    case "1", "t", "T", "true", "TRUE", "True", "y", "Y", "yes", "YES", "Yes", "on", "ON", "On", "ok", "OK", "Ok":
         return true, nil
     case "0", "f", "F", "false", "FALSE", "False", "n", "N", "no", "NO", "No", "off", "OFF", "Off":
         return false, nil
