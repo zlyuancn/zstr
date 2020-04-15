@@ -98,7 +98,7 @@ func (m *String) Int32Default(def int32) int32 {
 func (m *String) Int64() (int64, error) {
     return strconv.ParseInt(m.val, 10, 64)
 }
-func (m *String) IntDefaul64t(def int64) int64 {
+func (m *String) Int64Default(def int64) int64 {
     if a, err := m.Int64(); err == nil {
         return a
     }
