@@ -14,109 +14,65 @@ import (
     "strconv"
 )
 
-func Scan(s string, v interface{}) error {
-    switch v := v.(type) {
+func Scan(s string, outPtr interface{}) (err error) {
+    switch p := outPtr.(type) {
     case nil:
         return fmt.Errorf("zstr: Scan(nil)")
 
     case *string:
-        *v = s
-        return nil
+        *p = s
     case *[]byte:
-        *v = []byte(s)
-        return nil
+        *p = []byte(s)
     case *bool:
-        var err error
-        *v, err = ToBool(s)
-        return err
+        *p, err = ToBool(s)
     case *int:
-        var err error
-        *v, err = strconv.Atoi(s)
-        return err
+        *p, err = strconv.Atoi(s)
     case *int8:
-        n, err := strconv.ParseInt(s, 10, 8)
-        if err != nil {
-            return err
-        }
-        *v = int8(n)
-        return nil
+        var n int64
+        n, err = strconv.ParseInt(s, 10, 8)
+        *p = int8(n)
     case *int16:
-        n, err := strconv.ParseInt(s, 10, 16)
-        if err != nil {
-            return err
-        }
-        *v = int16(n)
-        return nil
+        var n int64
+        n, err = strconv.ParseInt(s, 10, 16)
+        *p = int16(n)
     case *int32:
-        n, err := strconv.ParseInt(s, 10, 32)
-        if err != nil {
-            return err
-        }
-        *v = int32(n)
-        return nil
+        var n int64
+        n, err = strconv.ParseInt(s, 10, 32)
+        *p = int32(n)
     case *int64:
-        n, err := strconv.ParseInt(s, 10, 64)
-        if err != nil {
-            return err
-        }
-        *v = n
-        return nil
+        *p, err = strconv.ParseInt(s, 10, 64)
 
     case *uint:
-        n, err := strconv.ParseUint(s, 10, 64)
-        if err != nil {
-            return err
-        }
-        *v = uint(n)
-        return nil
+        var n uint64
+        n, err = strconv.ParseUint(s, 10, 64)
+        *p = uint(n)
     case *uint8:
-        n, err := strconv.ParseUint(s, 10, 8)
-        if err != nil {
-            return err
-        }
-        *v = uint8(n)
-        return nil
+        var n uint64
+        n, err = strconv.ParseUint(s, 10, 8)
+        *p = uint8(n)
     case *uint16:
-        n, err := strconv.ParseUint(s, 10, 16)
-        if err != nil {
-            return err
-        }
-        *v = uint16(n)
-        return nil
+        var n uint64
+        n, err = strconv.ParseUint(s, 10, 16)
+        *p = uint16(n)
     case *uint32:
-        n, err := strconv.ParseUint(s, 10, 32)
-        if err != nil {
-            return err
-        }
-        *v = uint32(n)
-        return nil
+        var n uint64
+        n, err = strconv.ParseUint(s, 10, 32)
+        *p = uint32(n)
     case *uint64:
-        n, err := strconv.ParseUint(s, 10, 64)
-        if err != nil {
-            return err
-        }
-        *v = n
-        return nil
+        *p, err = strconv.ParseUint(s, 10, 64)
 
     case *float32:
-        n, err := strconv.ParseFloat(s, 32)
-        if err != nil {
-            return err
-        }
-        *v = float32(n)
-        return nil
+        var n float64
+        n, err = strconv.ParseFloat(s, 32)
+        *p = float32(n)
     case *float64:
-        n, err := strconv.ParseFloat(s, 64)
-        if err != nil {
-            return err
-        }
-        *v = n
-        return nil
+        *p, err = strconv.ParseFloat(s, 64)
 
     case encoding.BinaryUnmarshaler:
-        return v.UnmarshalBinary([]byte(s))
+        return p.UnmarshalBinary([]byte(s))
 
     default:
-        return fmt.Errorf("zstr: 无法解码 %T, 考虑为它实现encoding.BinaryUnmarshaler接口", v)
+        return fmt.Errorf("zstr: 无法解码 %T, 考虑为它实现encoding.BinaryUnmarshaler接口", p)
     }
+    return
 }
