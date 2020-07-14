@@ -9,7 +9,6 @@
 package zstr
 
 import (
-    "fmt"
     "strconv"
 )
 
@@ -32,13 +31,7 @@ func (m *String) Bytes() []byte {
 }
 
 func (m *String) Bool() (bool, error) {
-    switch m.val {
-    case "1", "t", "T", "true", "TRUE", "True", "y", "Y", "yes", "YES", "Yes", "on", "ON", "On", "ok", "OK", "Ok":
-        return true, nil
-    case "0", "f", "F", "false", "FALSE", "False", "n", "N", "no", "NO", "No", "off", "OFF", "Off":
-        return false, nil
-    }
-    return false, fmt.Errorf("数据\"%s\"无法转换为bool", m.val)
+    return ToBool(m.val)
 }
 func (m *String) BoolDefault(def ...bool) bool {
     if a, err := m.Bool(); err == nil {

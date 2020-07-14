@@ -26,16 +26,9 @@ func Scan(s string, v interface{}) error {
         *v = []byte(s)
         return nil
     case *bool:
-        switch s {
-        case "1", "t", "T", "true", "TRUE", "True", "y", "Y", "yes", "YES", "Yes", "on", "ON", "On", "ok", "OK", "Ok":
-            *v = true
-            return nil
-        case "0", "f", "F", "false", "FALSE", "False", "n", "N", "no", "NO", "No", "off", "OFF", "Off":
-            *v = false
-            return nil
-        }
-        return fmt.Errorf("数据\"%s\"无法转换为bool", s)
-
+        var err error
+        *v, err = ToBool(s)
+        return err
     case *int:
         var err error
         *v, err = strconv.Atoi(s)
