@@ -53,11 +53,11 @@ func makeTemplateData(kvs []interface{}) map[string]string {
 
 // 模板渲染
 //
+// 输入的kv必须为：map[string]string，map[string]interface{}，或健值对
 // 示例:
-//    s:=TemplateRender("s@name e", "name", "v")
-//    s:=TemplateRender("s@name e", "x", "v")
-//    s:=TemplateRender("s@name e", "name", nil)
-//    s:=TemplateRender("s@name e", "name", 2)
+//    s:=TemplateRender("s@a e", "a", "v")
+//    s:=TemplateRender("s{@a}e", "a", "v")
+//    s:=TemplateRender("s{@a}e", map[string]string{"a": "v"})
 func TemplateRender(format string, kvs ...interface{}) string {
 	data := makeTemplateData(kvs)
 	result := templateRegexCrust.ReplaceAllStringFunc(format, func(s string) string {
