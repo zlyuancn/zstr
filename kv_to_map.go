@@ -9,7 +9,7 @@
 package zstr
 
 // 构建map, 支持 map[string]string，map[string]interface{}，或健值对
-func makeMapOfkv(kvs []interface{}) map[string]interface{} {
+func makeMapOfkvs(kvs []interface{}) map[string]interface{} {
 	var data = make(map[string]interface{})
 	if len(kvs) == 0 {
 		return data
@@ -32,7 +32,7 @@ func makeMapOfkv(kvs []interface{}) map[string]interface{} {
 		panic("输入的kv必须为2的倍数")
 	}
 	for i := 0; i < len(kvs)-1; i += 2 {
-		data[anyToString(kvs[i])] = anyToString(kvs[i+1])
+		data[anyToString(kvs[i])] = kvs[i+1]
 	}
 	return data
 }

@@ -23,7 +23,7 @@ var templateRegexCrust = regexp.MustCompile(`\{@\w+\}`)
 //    s:=TemplateRender("s{@a}e", "a", "v")
 //    s:=TemplateRender("s{@a}e", map[string]string{"a": "v"})
 func TemplateRender(format string, kvs ...interface{}) string {
-	data := makeMapOfkv(kvs)
+	data := makeMapOfkvs(kvs)
 	// 替换 {@field}, 如果没有设置则替换为空字符串
 	result := templateRegexCrust.ReplaceAllStringFunc(format, func(s string) string {
 		v, ok := data[s[2:len(s)-1]]
