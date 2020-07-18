@@ -8,12 +8,12 @@
 
 package zstr
 
+// 构建map, 支持 map[string]string，map[string]interface{}，或健值对
 func makeMapOfkv(kvs []interface{}) map[string]interface{} {
-	if len(kvs) == 0 {
-		panic("输入的kv必须为：map[string]string，map[string]interface{}，或健值对")
-	}
-
 	var data = make(map[string]interface{})
+	if len(kvs) == 0 {
+		return data
+	}
 
 	switch p := kvs[0].(type) {
 	case map[string]string:
