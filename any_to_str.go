@@ -62,7 +62,7 @@ func anyToSqlString(a interface{}, str_crust bool) string {
 	switch v := a.(type) {
 
 	case nil:
-		return "NULL"
+		return "null"
 
 	case string:
 		if str_crust {
