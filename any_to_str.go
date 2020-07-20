@@ -58,16 +58,22 @@ func anyToString(a interface{}) string {
 }
 
 // 任何值转sql需要的字符串
-func anyToSqlString(a interface{}) string {
+func anyToSqlString(a interface{}, str_crust bool) string {
 	switch v := a.(type) {
 
 	case nil:
 		return "NULL"
 
 	case string:
-		return `"` + v + `"`
+		if str_crust {
+			return `"` + v + `"`
+		}
+		return v
 	case []byte:
-		return `"` + string(v) + `"`
+		if str_crust {
+			return `"` + string(v) + `"`
+		}
+		return string(v)
 	case bool:
 		if v {
 			return "true"
@@ -105,7 +111,7 @@ func anyToSqlString(a interface{}) string {
 	l := r_v.Len()
 	ss := make([]string, l)
 	for i := 0; i < l; i++ {
-		ss[i] = anyToSqlString(reflect.Indirect(r_v.Index(i)).Interface())
+		ss[i] = anyToSqlString(reflect.Indirect(r_v.Index(i)).Interface(), str_crust)
 	}
 	return `(` + strings.Join(ss, ", ") + `)`
 }

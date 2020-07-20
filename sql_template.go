@@ -73,7 +73,7 @@ func sqlTranslate(text, flag string, crust bool, m map[string]interface{}) strin
 	switch operation {
 	case "@":
 		if has {
-			return anyToSqlString(value)
+			return anyToSqlString(value, true)
 		}
 		if crust {
 			return ""
@@ -90,15 +90,15 @@ func sqlTranslate(text, flag string, crust bool, m map[string]interface{}) strin
 	var out string
 	switch cflag {
 	case ">", ">=", "<", "<=", "!=", "<>", "=":
-		out = fmt.Sprintf(`%s %s %s %s`, operation, name, cflag, anyToSqlString(value))
+		out = fmt.Sprintf(`%s %s %s %s`, operation, name, cflag, anyToSqlString(value, true))
 	case "in", "not in":
-		out = fmt.Sprintf(`%s %s %s %s`, operation, name, cflag, anyToSqlString(value))
+		out = fmt.Sprintf(`%s %s %s %s`, operation, name, cflag, anyToSqlString(value, true))
 	case "like": // 包含xx
-		out = fmt.Sprintf(`%s %s like "%%%s%%"`, operation, name, anyToSqlString(value))
+		out = fmt.Sprintf(`%s %s like "%%%s%%"`, operation, name, anyToSqlString(value, false))
 	case "likestart", "like_start": // 以xx开始
-		out = fmt.Sprintf(`%s %s like "%s%%"`, operation, name, anyToSqlString(value))
+		out = fmt.Sprintf(`%s %s like "%s%%"`, operation, name, anyToSqlString(value, false))
 	case "likeend", "like_end": // 以xx结束
-		out = fmt.Sprintf(`%s %s like "%%%s"`, operation, name, anyToSqlString(value))
+		out = fmt.Sprintf(`%s %s like "%%%s"`, operation, name, anyToSqlString(value, false))
 	default:
 		panic(fmt.Errorf(`syntax error, non-supported flag "%s"`, flag))
 	}
