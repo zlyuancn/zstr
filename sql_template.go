@@ -16,8 +16,8 @@ import (
 
 const defaultSqlCompareFlag = "="
 
-var sqlTemplateRegex = regexp.MustCompile(`[&|]\w+`)
-var sqlTemplateRegexCrust = regexp.MustCompile(`{[&|]\w+}`)
+var sqlTemplateRegex = regexp.MustCompile(`[&|@]\w+`)
+var sqlTemplateRegexCrust = regexp.MustCompile(`{[&|@]\w+}`)
 var sqlTemplateRegexCrustAndFlag = regexp.MustCompile(`{[&|]\w+ .+?}`)
 
 // sql模板渲染
@@ -27,6 +27,7 @@ var sqlTemplateRegexCrustAndFlag = regexp.MustCompile(`{[&|]\w+ .+?}`)
 // 语法格式3:   {(操作符)(name) (对比标志)}   示例:   {&a in}   {|a >}
 //
 // 操作符支持:
+//     @: 直接赋值, 这个操作符仅不支持   {(操作符)(name) (对比标志)}   格式
 //     &: 转为 and
 //     |: 转为 or
 //
@@ -35,7 +36,7 @@ var sqlTemplateRegexCrustAndFlag = regexp.MustCompile(`{[&|]\w+ .+?}`)
 // 输入的kvs必须为：map[string]string, map[string]interface{}, 或健值对
 //
 // 注意:
-//     如果name没有传参, 则将语法替换为空字符串
+//     如果name没有传参, 则替换为空字符串
 //     如果name的值为nil, 则结果为: (操作符) (name) is null
 //     如果name的值是一个切片, 结果会用逗号连接起来且外面会加上小括号. 如 []string{"a", "b"} 会转为 ("a", "b")
 //
@@ -50,22 +51,32 @@ var sqlTemplateRegexCrustAndFlag = regexp.MustCompile(`{[&|]\w+ .+?}`)
 func SqlTemplateRender(sql_template string, kvs ...interface{}) string {
 	data := makeMapOfkvs(kvs)
 	result := sqlTemplateRegexCrust.ReplaceAllStringFunc(sql_template, func(s string) string {
-		return sqlTranslate(s[1:len(s)-1], defaultSqlCompareFlag, data)
+		return sqlTranslate(s[1:len(s)-1], defaultSqlCompareFlag, true, data)
 	})
 	result = sqlTemplateRegexCrustAndFlag.ReplaceAllStringFunc(result, func(s string) string {
 		k := strings.Index(s, " ")
-		return sqlTranslate(s[1:k], s[k+1:len(s)-1], data)
+		return sqlTranslate(s[1:k], s[k+1:len(s)-1], true, data)
 	})
 	result = sqlTemplateRegex.ReplaceAllStringFunc(result, func(s string) string {
-		return sqlTranslate(s, defaultSqlCompareFlag, data)
+		return sqlTranslate(s, defaultSqlCompareFlag, false, data)
 	})
 	return repairSql(result)
 }
 
-func sqlTranslate(text, flag string, m map[string]interface{}) string {
+func sqlTranslate(text, flag string, crust bool, m map[string]interface{}) string {
 	operation, name, cflag := text[:1], text[1:], strings.ToLower(flag)
 
+	value, has := m[name]
+
 	switch operation {
+	case "@":
+		if has {
+			return anyToSqlString(value)
+		}
+		if crust {
+			return ""
+		}
+		return text
 	case "&":
 		operation = "and"
 	case "|":
@@ -74,19 +85,18 @@ func sqlTranslate(text, flag string, m map[string]interface{}) string {
 		panic(fmt.Errorf(`syntax error, non-supported operation "%s"`, operation))
 	}
 
-	v, has := m[name]
 	var out string
 	switch cflag {
 	case ">", ">=", "<", "<=", "!=", "<>", "=":
-		out = fmt.Sprintf(`%s %s %s %s`, operation, name, cflag, anyToSqlString(v))
+		out = fmt.Sprintf(`%s %s %s %s`, operation, name, cflag, anyToSqlString(value))
 	case "in", "not in":
-		out = fmt.Sprintf(`%s %s %s %s`, operation, name, cflag, anyToSqlString(v))
+		out = fmt.Sprintf(`%s %s %s %s`, operation, name, cflag, anyToSqlString(value))
 	case "like": // 包含xx
-		out = fmt.Sprintf(`%s %s like "%%%s%%"`, operation, name, anyToSqlString(v))
+		out = fmt.Sprintf(`%s %s like "%%%s%%"`, operation, name, anyToSqlString(value))
 	case "likestart", "like_start": // 以xx开始
-		out = fmt.Sprintf(`%s %s like "%s%%"`, operation, name, anyToSqlString(v))
+		out = fmt.Sprintf(`%s %s like "%s%%"`, operation, name, anyToSqlString(value))
 	case "likeend", "like_end": // 以xx结束
-		out = fmt.Sprintf(`%s %s like "%%%s"`, operation, name, anyToSqlString(v))
+		out = fmt.Sprintf(`%s %s like "%%%s"`, operation, name, anyToSqlString(value))
 	default:
 		panic(fmt.Errorf(`syntax error, non-supported flag "%s"`, flag))
 	}
@@ -94,7 +104,7 @@ func sqlTranslate(text, flag string, m map[string]interface{}) string {
 	if !has {
 		return ""
 	}
-	if v == nil {
+	if value == nil {
 		return fmt.Sprintf(`%s %s is null`, operation, name)
 	}
 	return out
