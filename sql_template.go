@@ -27,7 +27,7 @@ var sqlTemplateRegexCrustAndFlag = regexp.MustCompile(`{[&|]\w+ .+?}`)
 // 语法格式3:   {(操作符)(name) (对比标志)}   示例:   {&a in}   {|a >}
 //
 // 操作符支持:
-//     @: 直接赋值, 这个操作符仅不支持   {(操作符)(name) (对比标志)}   格式
+//     @: 直接赋值, 如果没有传值会panic, 这个操作符不支持   {(操作符)(name) (对比标志)}   格式
 //     &: 转为 and
 //     |: 转为 or
 //
@@ -73,7 +73,10 @@ func sqlTranslate(text, flag string, crust bool, m map[string]interface{}) strin
 		if has {
 			return anyToSqlString(value)
 		}
-		return ""
+		if crust {
+			return ""
+		}
+		panic(fmt.Sprintf(`"%s" must have a value`, text))
 	case "&":
 		operation = "and"
 	case "|":
