@@ -17,7 +17,7 @@ var templateRegexCrust = regexp.MustCompile(`\{@\w+\}`)
 
 // 模板渲染
 //
-// 输入的kv必须为：map[string]string，map[string]interface{}，或健值对
+// 输入的kvs必须为：map[string]string，map[string]interface{}，或健值对
 // 示例:
 //    s:=TemplateRender("s@a e", "a", "v")
 //    s:=TemplateRender("s{@a}e", "a", "v")

@@ -15,6 +15,7 @@ import (
 	"strings"
 )
 
+// 任何值转字符串
 func anyToString(a interface{}) string {
 	switch v := a.(type) {
 
@@ -56,6 +57,7 @@ func anyToString(a interface{}) string {
 	return fmt.Sprint(a)
 }
 
+// 任何值转sql需要的字符串
 func anyToSqlString(a interface{}) string {
 	switch v := a.(type) {
 

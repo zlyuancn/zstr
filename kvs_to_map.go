@@ -29,7 +29,7 @@ func makeMapOfkvs(kvs []interface{}) map[string]interface{} {
 	}
 
 	if len(kvs)&1 != 0 {
-		panic("输入的kv必须为2的倍数")
+		panic("输入的kvs必须为2的倍数")
 	}
 	for i := 0; i < len(kvs)-1; i += 2 {
 		data[anyToString(kvs[i])] = kvs[i+1]
