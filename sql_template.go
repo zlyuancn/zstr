@@ -73,10 +73,7 @@ func sqlTranslate(text, flag string, crust bool, m map[string]interface{}) strin
 		if has {
 			return anyToSqlString(value)
 		}
-		if crust {
-			return ""
-		}
-		return text
+		return ""
 	case "&":
 		operation = "and"
 	case "|":
