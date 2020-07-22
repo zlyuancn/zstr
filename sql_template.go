@@ -19,7 +19,7 @@ const defaultSqlCompareFlag = "="
 
 var sqlTemplateRegex = regexp.MustCompile(`[&|@]\w+`)
 var sqlTemplateRegexCrust = regexp.MustCompile(`{[&|@]\w+}`)
-var sqlTemplateRegexCrustAndFlag = regexp.MustCompile(`{[&|]\w+ .+?}`)
+var sqlTemplateRegexCrustAndFlag = regexp.MustCompile(`{[&|]\w+ \S+?}`)
 var sqlTemplateParseNameRegex = regexp.MustCompile(`{{\d+}}`)
 
 type sqlTemplate struct {
