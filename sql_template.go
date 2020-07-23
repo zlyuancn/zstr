@@ -213,7 +213,7 @@ func (m *sqlTemplate) translate(text, flag string, crust bool, opts string) stri
 //     &: 转为 and
 //     |: 转为 or
 //
-// 对比标志支持:   >   >=   <   <=   !=   <>   =   in   not in   like   likestart    like_start   likeend   like_end
+// 对比标志支持:   >   >=   <   <=   !=   <>   =   in   notin   like   likestart    like_start   likeend   like_end
 //
 // 输入的kvs必须为：map[string]string, map[string]interface{}, 或健值对
 //
@@ -247,7 +247,7 @@ func SqlTemplateParse(sql_template string, kvs ...interface{}) (sql_str string, 
 //     &: 转为 and
 //     |: 转为 or
 //
-// 对比标志支持:   >   >=   <   <=   !=   <>   =   in   not in   like   likestart    like_start   likeend   like_end
+// 对比标志支持:   >   >=   <   <=   !=   <>   =   in   notin   like   likestart    like_start   likeend   like_end
 //
 // 输入的kvs必须为：map[string]string, map[string]interface{}, 或健值对
 //
