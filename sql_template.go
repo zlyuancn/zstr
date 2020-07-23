@@ -17,11 +17,50 @@ import (
 
 const defaultSqlCompareFlag = "="
 
-var sqlTemplateRegex = regexp.MustCompile(`[&|@]\w+`)
-var sqlTemplateRegexCrust = regexp.MustCompile(`\{[&|@]\w+\}`)
-var sqlTemplateRegexCrustAndFlag = regexp.MustCompile(`\{[&|]\w+ \S+?\}`)
-var sqlTemplateRegexCrustAndFlagWithMode = regexp.MustCompile(`\{[&|]\w+ \S+? \S+?\}`)
-var sqlTemplateParseNameRegex = regexp.MustCompile(`\{\{\d+\}\}`)
+var (
+	// 标准
+	sqlTemplateRegex = regexp.MustCompile(`[&|@]\w+`)
+	// 加壳
+	sqlTemplateRegexCrust = regexp.MustCompile(`\{[\s\S]*?\}`)
+
+	// id
+	sqlTemplateParseIdRegex = regexp.MustCompile(`\{\{\d+\}\}`)
+
+	// 空字符串
+	emptyStrRegex = regexp.MustCompile(`\s+`)
+
+	// 变量名
+	variableNameRegex = regexp.MustCompile(`^\w+$`)
+	// 操作符
+	sqlTemplateOperationMapp = map[string]struct{}{
+		"@": {},
+		"&": {},
+		"|": {},
+	}
+	// 标记
+	sqlTemplateFlagMapp = map[string]struct{}{
+		">":          {},
+		">=":         {},
+		"<":          {},
+		"<=":         {},
+		"!=":         {},
+		"<>":         {},
+		"=":          {},
+		"in":         {},
+		"notin":      {},
+		"not_in":     {},
+		"like":       {},
+		"likestart":  {},
+		"like_start": {},
+		"likeend":    {},
+		"like_end":   {},
+	}
+	// 选项
+	sqlTemplateOptsMapp = map[int32]struct{}{
+		'i': {},
+		'd': {},
+	}
+)
 
 type sqlTemplate struct {
 	data   map[string]interface{}
@@ -46,29 +85,23 @@ func (m *sqlTemplate) addValue(name string, value interface{}) (flag string) {
 
 func (m *sqlTemplate) Parse(sql_template string) (sql_str string, names []string, args []interface{}) {
 	sql_str = sqlTemplateRegexCrust.ReplaceAllStringFunc(sql_template, func(s string) string {
-		return m.translate(s[1:len(s)-1], defaultSqlCompareFlag, true, "")
-	})
-
-	sql_str = sqlTemplateRegexCrustAndFlag.ReplaceAllStringFunc(sql_str, func(s string) string {
-		k := strings.Index(s, " ")
-		text, flag := s[1:k], s[k+1:len(s)-1]
-		return m.translate(text, flag, true, "")
-	})
-
-	sql_str = sqlTemplateRegexCrustAndFlagWithMode.ReplaceAllStringFunc(sql_str, func(s string) string {
-		k := strings.Index(s, " ")
-		text, flag := s[1:k], s[k+1:len(s)-1]
-		k = strings.Index(flag, " ")
-		flag, opts := flag[:k], flag[k+1:]
-		return m.translate(text, flag, true, opts)
+		operation, name, flag, opts, err := sqlTemplateSyntaxParse(s[1 : len(s)-1])
+		if err != nil {
+			panic(err)
+		}
+		return m.translate(operation, name, flag, opts, true)
 	})
 
 	sql_str = sqlTemplateRegex.ReplaceAllStringFunc(sql_str, func(s string) string {
-		return m.translate(s, defaultSqlCompareFlag, false, "")
+		operation, name, flag, opts, err := sqlTemplateSyntaxParse(s)
+		if err != nil {
+			panic(err)
+		}
+		return m.translate(operation, name, flag, opts, false)
 	})
 
 	// 按顺序写入names和args
-	sql_str = sqlTemplateParseNameRegex.ReplaceAllStringFunc(sql_str, func(s string) string {
+	sql_str = sqlTemplateParseIdRegex.ReplaceAllStringFunc(sql_str, func(s string) string {
 		index, _ := strconv.Atoi(s[2 : len(s)-2])
 		names = append(names, m.names[index])
 		args = append(args, m.values[index])
@@ -79,22 +112,14 @@ func (m *sqlTemplate) Parse(sql_template string) (sql_str string, names []string
 	return sql_str, names, args
 }
 
-func (m *sqlTemplate) translate(text, flag string, crust bool, opts string) string {
-	operation, name, cflag := text[:1], text[1:], strings.ToLower(flag)
-
+func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust bool) string {
 	// 选项检查
 	var ignore_opt, direct_opt bool
 	for _, o := range opts {
 		switch o {
 		case 'i':
-			if ignore_opt {
-				panic(fmt.Sprintf(`syntax error, repetitive option "%s"`, string(o)))
-			}
 			ignore_opt = true
 		case 'd':
-			if direct_opt {
-				panic(fmt.Sprintf(`syntax error, repetitive option "%s"`, string(o)))
-			}
 			direct_opt = true
 		default:
 			panic(fmt.Sprintf(`syntax error, non-supported option "%s"`, string(o)))
@@ -112,7 +137,7 @@ func (m *sqlTemplate) translate(text, flag string, crust bool, opts string) stri
 		if crust {
 			return "null"
 		}
-		panic(fmt.Sprintf(`"%s" must have a value`, text))
+		panic(fmt.Sprintf(`"%s" must have a value`, name))
 	case "&":
 		operation = "and"
 	case "|":
@@ -124,20 +149,20 @@ func (m *sqlTemplate) translate(text, flag string, crust bool, opts string) stri
 	var makeSqlStr func() string
 	var directWrite func() string
 	// 标记
-	switch cflag {
+	switch flag {
 	case ">", ">=", "<", "<=", "!=", "<>", "=":
 		makeSqlStr = func() string {
-			return fmt.Sprintf(`%s %s %s %s`, operation, name, cflag, m.addValue(name, value))
+			return fmt.Sprintf(`%s %s %s %s`, operation, name, flag, m.addValue(name, value))
 		}
 		directWrite = func() string {
-			return fmt.Sprintf(`%s %s %s %s`, operation, name, cflag, anyToSqlString(value, true))
+			return fmt.Sprintf(`%s %s %s %s`, operation, name, flag, anyToSqlString(value, true))
 		}
 	case "in":
 		makeSqlStr = func() string {
-			return fmt.Sprintf(`%s %s %s (%s)`, operation, name, cflag, m.addValue(name, value))
+			return fmt.Sprintf(`%s %s %s (%s)`, operation, name, flag, m.addValue(name, value))
 		}
 		directWrite = func() string {
-			return fmt.Sprintf(`%s %s %s %s`, operation, name, cflag, anyToSqlString(value, true))
+			return fmt.Sprintf(`%s %s %s %s`, operation, name, flag, anyToSqlString(value, true))
 		}
 	case "notin", "not_in":
 		makeSqlStr = func() string {
@@ -194,6 +219,79 @@ func (m *sqlTemplate) translate(text, flag string, crust bool, opts string) stri
 		return directWrite()
 	}
 	return makeSqlStr()
+}
+
+func sqlTemplateSyntaxParse(text string) (operation, name, flag, opts string, err error) {
+	// 去头去尾
+	temp := strings.TrimSpace(text)
+	// 空数据
+	if temp == "" {
+		err = fmt.Errorf("syntax error, {%s}, empty data", text)
+		return
+	}
+
+	// 分离操作符
+	operation, temp = temp[:1], temp[1:]
+
+	// 缩进空格
+	temp = emptyStrRegex.ReplaceAllString(temp, " ")
+
+	// 分离数据
+	texts := strings.SplitN(temp, " ", 4) // 4为考虑尾部可能有空格
+	if len(texts) >= 1 {
+		name = texts[0]
+	}
+	if len(texts) >= 2 {
+		flag = texts[1]
+	} else {
+		flag = defaultSqlCompareFlag
+	}
+	if len(texts) >= 3 {
+		opts = texts[2]
+	}
+	if len(texts) >= 4 && texts[3] != " " {
+		err = fmt.Errorf("syntax error, {%s}, redundant data", text)
+		return
+	}
+
+	// 检查操作符
+	if _, ok := sqlTemplateOperationMapp[operation]; !ok {
+		err = fmt.Errorf(`syntax error, {%s}, non-supported operation "%s"`, text, operation)
+		return
+	}
+
+	// 检查变量名
+	if name == "" {
+		err = fmt.Errorf("syntax error, {%s}, no variable name", text)
+		return
+	}
+	if !variableNameRegex.MatchString(name) {
+		err = fmt.Errorf("syntax error, {%s}, Invalid variable name", text)
+		return
+	}
+
+	// 检查标记
+	if _, ok := sqlTemplateFlagMapp[flag]; !ok {
+		err = fmt.Errorf(`syntax error, {%s}, non-supported flag "%s"`, text, flag)
+		return
+	}
+
+	// 检查选项
+	os := make(map[int32]struct{})
+	for _, o := range opts {
+		if _, ok := sqlTemplateOptsMapp[o]; !ok {
+			err = fmt.Errorf(`syntax error, {%s}, non-supported option "%s"`, text, string(o))
+			return
+		}
+		// 重复选项
+		if _, ok := os[o]; ok {
+			err = fmt.Errorf(`syntax error, {%s}, repetitive option "%s"`, text, string(o))
+			return
+		}
+		os[o] = struct{}{}
+	}
+
+	return
 }
 
 // sql模板解析
@@ -267,20 +365,33 @@ func SqlTemplateParse(sql_template string, kvs ...interface{}) (sql_str string, 
 func SqlTemplateRender(sql_template string, kvs ...interface{}) string {
 	data := makeMapOfkvs(kvs)
 	result := sqlTemplateRegexCrust.ReplaceAllStringFunc(sql_template, func(s string) string {
-		return sqlTranslate(s[1:len(s)-1], defaultSqlCompareFlag, true, data)
-	})
-	result = sqlTemplateRegexCrustAndFlag.ReplaceAllStringFunc(result, func(s string) string {
-		k := strings.Index(s, " ")
-		return sqlTranslate(s[1:k], s[k+1:len(s)-1], true, data)
+		operation, name, flag, opts, err := sqlTemplateSyntaxParse(s[1 : len(s)-1])
+		if err != nil {
+			panic(err)
+		}
+		return sqlTranslate(operation, name, flag, opts, true, data)
 	})
 	result = sqlTemplateRegex.ReplaceAllStringFunc(result, func(s string) string {
-		return sqlTranslate(s, defaultSqlCompareFlag, false, data)
+		operation, name, flag, opts, err := sqlTemplateSyntaxParse(s)
+		if err != nil {
+			panic(err)
+		}
+		return sqlTranslate(operation, name, flag, opts, false, data)
 	})
 	return repairSql(result)
 }
 
-func sqlTranslate(text, flag string, crust bool, m map[string]interface{}) string {
-	operation, name, cflag := text[:1], text[1:], strings.ToLower(flag)
+func sqlTranslate(operation, name, flag string, opts string, crust bool, m map[string]interface{}) string {
+	// 选项检查
+	var ignore_opt bool
+	for _, o := range opts {
+		switch o {
+		case 'i':
+			ignore_opt = true
+		default:
+			panic(fmt.Sprintf(`syntax error, non-supported option "%s"`, string(o)))
+		}
+	}
 
 	value, has := m[name]
 
@@ -292,7 +403,7 @@ func sqlTranslate(text, flag string, crust bool, m map[string]interface{}) strin
 		if crust {
 			return "null"
 		}
-		panic(fmt.Sprintf(`"%s" must have a value`, text))
+		panic(fmt.Sprintf(`"%s" must have a value`, name))
 	case "&":
 		operation = "and"
 	case "|":
@@ -302,11 +413,11 @@ func sqlTranslate(text, flag string, crust bool, m map[string]interface{}) strin
 	}
 
 	var sql_str string
-	switch cflag {
+	switch flag {
 	case ">", ">=", "<", "<=", "!=", "<>", "=":
-		sql_str = fmt.Sprintf(`%s %s %s %s`, operation, name, cflag, anyToSqlString(value, true))
+		sql_str = fmt.Sprintf(`%s %s %s %s`, operation, name, flag, anyToSqlString(value, true))
 	case "in":
-		sql_str = fmt.Sprintf(`%s %s %s %s`, operation, name, cflag, anyToSqlString(value, true))
+		sql_str = fmt.Sprintf(`%s %s %s %s`, operation, name, flag, anyToSqlString(value, true))
 	case "notin", "not_in":
 		sql_str = fmt.Sprintf(`%s %s not in %s`, operation, name, anyToSqlString(value, true))
 	case "like": // 包含xx
@@ -319,11 +430,20 @@ func sqlTranslate(text, flag string, crust bool, m map[string]interface{}) strin
 		panic(fmt.Errorf(`syntax error, non-supported flag "%s"`, flag))
 	}
 
+	// 无值返回空sql语句
 	if !has {
 		return ""
 	}
+
+	// 忽略模式, 零值返回空sql语句
+	if ignore_opt && IsZero(value) {
+		return ""
+	}
+
+	// nil 改为 is null
 	if value == nil {
 		return fmt.Sprintf(`%s %s is null`, operation, name)
 	}
+
 	return sql_str
 }
