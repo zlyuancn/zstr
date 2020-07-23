@@ -132,12 +132,19 @@ func (m *sqlTemplate) translate(text, flag string, crust bool, opts string) stri
 		directWrite = func() string {
 			return fmt.Sprintf(`%s %s %s %s`, operation, name, cflag, anyToSqlString(value, true))
 		}
-	case "in", "not in":
+	case "in":
 		makeSqlStr = func() string {
 			return fmt.Sprintf(`%s %s %s (%s)`, operation, name, cflag, m.addValue(name, value))
 		}
 		directWrite = func() string {
 			return fmt.Sprintf(`%s %s %s %s`, operation, name, cflag, anyToSqlString(value, true))
+		}
+	case "notin":
+		makeSqlStr = func() string {
+			return fmt.Sprintf(`%s %s not in (%s)`, operation, name, m.addValue(name, value))
+		}
+		directWrite = func() string {
+			return fmt.Sprintf(`%s %s not in %s`, operation, name, anyToSqlString(value, true))
 		}
 	case "like": // 包含xx
 		makeSqlStr = func() string {
@@ -298,8 +305,10 @@ func sqlTranslate(text, flag string, crust bool, m map[string]interface{}) strin
 	switch cflag {
 	case ">", ">=", "<", "<=", "!=", "<>", "=":
 		sql_str = fmt.Sprintf(`%s %s %s %s`, operation, name, cflag, anyToSqlString(value, true))
-	case "in", "not in":
+	case "in":
 		sql_str = fmt.Sprintf(`%s %s %s %s`, operation, name, cflag, anyToSqlString(value, true))
+	case "not in":
+		sql_str = fmt.Sprintf(`%s %s not in %s`, operation, name, anyToSqlString(value, true))
 	case "like": // 包含xx
 		sql_str = fmt.Sprintf(`%s %s like "%%%s%%"`, operation, name, anyToSqlString(value, false))
 	case "likestart", "like_start": // 以xx开始
