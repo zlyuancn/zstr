@@ -19,7 +19,7 @@ const defaultSqlCompareFlag = "="
 
 var (
 	// 标准
-	sqlTemplateRegex = regexp.MustCompile(`[&|@]\w+`)
+	sqlTemplateRegex = regexp.MustCompile(`[&|@]\w*\.?\w+`)
 	// 加壳
 	sqlTemplateRegexCrust = regexp.MustCompile(`\{[\s\S]*?\}`)
 
@@ -30,7 +30,7 @@ var (
 	emptyStrRegex = regexp.MustCompile(`\s+`)
 
 	// 变量名
-	variableNameRegex = regexp.MustCompile(`^\w+$`)
+	variableNameRegex = regexp.MustCompile(`^\w*\.?\w+$`)
 	// 操作符
 	sqlTemplateOperationMapp = map[string]struct{}{
 		"@": {},
