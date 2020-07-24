@@ -272,8 +272,11 @@ func sqlTemplateSyntaxParse(text string) (operation, name, flag, opts string, er
 
 	// 检查标记
 	if _, ok := sqlTemplateFlagMapp[flag]; !ok {
-		err = fmt.Errorf(`syntax error, {%s}, non-supported flag "%s"`, text, flag)
-		return
+		if opts != "" {
+			err = fmt.Errorf(`syntax error, {%s}, non-supported flag "%s"`, text, flag)
+			return
+		}
+		flag, opts = defaultSqlCompareFlag, flag
 	}
 
 	// 检查选项
