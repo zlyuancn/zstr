@@ -19,7 +19,7 @@ const defaultSqlCompareFlag = "="
 
 var (
 	// 标准
-	sqlTemplateRegex = regexp.MustCompile(`[&|@]\w*\.?\w+`)
+	sqlTemplateRegex = regexp.MustCompile(`[&|#@]\w*\.?\w+`)
 	// 加壳
 	sqlTemplateRegexCrust = regexp.MustCompile(`\{[\s\S]*?\}`)
 
@@ -33,9 +33,10 @@ var (
 	variableNameRegex = regexp.MustCompile(`^\w*\.?\w+$`)
 	// 操作符
 	sqlTemplateOperationMapp = map[string]struct{}{
-		"@": {},
 		"&": {},
 		"|": {},
+		"#": {},
+		"@": {},
 	}
 	// 标记
 	sqlTemplateFlagMapp = map[string]struct{}{
@@ -57,8 +58,9 @@ var (
 	}
 	// 选项
 	sqlTemplateOptsMapp = map[int32]struct{}{
-		'i': {},
-		'd': {},
+		'i': {}, // ignore, 零值忽略
+		'd': {}, // direct, 直接将值写入sql语句
+		'm': {}, // must, 必填
 	}
 )
 
@@ -114,13 +116,15 @@ func (m *sqlTemplate) Parse(sql_template string) (sql_str string, names []string
 
 func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust bool) string {
 	// 选项检查
-	var ignore_opt, direct_opt bool
+	var ignore_opt, direct_opt, must_opt bool
 	for _, o := range opts {
 		switch o {
 		case 'i':
 			ignore_opt = true
 		case 'd':
 			direct_opt = true
+		case 'm':
+			must_opt = true
 		default:
 			panic(fmt.Sprintf(`syntax error, non-supported option "%s"`, string(o)))
 		}
@@ -128,22 +132,44 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 
 	value, has := m.data[name]
 
+	// 无值返回空sql语句
+	if !has {
+		if must_opt {
+			panic(fmt.Sprintf(`"%s" must have a value`, name))
+		}
+		return ""
+	}
+
+	// 忽略模式且值为零值返回空sql语句
+	if ignore_opt && IsZero(value) {
+		return ""
+	}
+
 	// 操作检查
 	switch operation {
 	case "@":
-		if has {
-			return m.addValue(name, value)
-		}
-		if crust {
+		direct_opt = true
+		fallthrough
+	case "#":
+		// nil改为null
+		if value == nil {
 			return "null"
 		}
-		panic(fmt.Sprintf(`"%s" must have a value`, name))
+		if direct_opt {
+			return anyToSqlString(value, true)
+		}
+		return m.addValue(name, value)
 	case "&":
 		operation = "and"
 	case "|":
 		operation = "or"
 	default:
 		panic(fmt.Errorf(`syntax error, non-supported operation "%s"`, operation))
+	}
+
+	// nil 改为 is null
+	if value == nil {
+		return fmt.Sprintf(`%s %s is null`, operation, name)
 	}
 
 	var makeSqlStr func() string
@@ -199,21 +225,6 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 		panic(fmt.Errorf(`syntax error, non-supported flag "%s"`, flag))
 	}
 
-	// 无值返回空sql语句
-	if !has {
-		return ""
-	}
-
-	// 忽略模式, 零值返回空sql语句
-	if ignore_opt && IsZero(value) {
-		return ""
-	}
-
-	// nil 改为 is null
-	if value == nil {
-		return fmt.Sprintf(`%s %s is null`, operation, name)
-	}
-
 	// 直接模式, 将值写入sql语句
 	if direct_opt {
 		return directWrite()
@@ -221,6 +232,47 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 	return makeSqlStr()
 }
 
+// sql模板语法解析
+//
+// 语法格式:   (操作符)(name)
+// 语法格式:   {(操作符)(name)}
+// 语法格式:   {(操作符)(name) (标志)}
+// 语法格式:   {(操作符)(name) (标志) (选项)}
+// 语法格式:   {(操作符)(name) (选项)}
+//
+// 操作符:
+//     &: 转为 and name flag value
+//     |: 转为 or name flag value
+//     #: 转为 value, 仅支持以下格式
+//          (操作符)(name)
+//          {(操作符)(name)}
+//          {(操作符)(name) (选项)}
+//     @: 同 # 操作符, 但是它自带 direct 选项
+//
+// name:   示例:    a   a2   a_2   a_2.b   a_2.b_2
+//
+// 标志:   >   >=   <   <=   !=   <>   =   in   notin   like   likestart    like_start   likeend   like_end
+//
+// 选项:
+//     i:   ignore, 如果参数值为该类型的零值则忽略
+//     d:   direct, 直接将值写入sql语句中
+//     m:   must, 必须传值, 值可以为零值
+//
+// 输入的kvs必须为：map[string]string, map[string]interface{}, 或健值对
+//
+// 注意:
+//     如果name没有传参, 则替换为空字符串
+//     如果name的值为nil, 则结果为: (操作符) (name) is null
+//     如果name的值是一个切片, 结果会用逗号连接起来且外面会加上小括号. 如 []string{"a", "b"} 会转为 ("a", "b")
+//
+// 示例:
+//    s := SqlTemplateRender("select * from t where &a {&b} {&c !=} {&d in} {|e} limit 1", map[string]interface{}{
+//		"a": 1,
+//		"b": "2",
+//		"c": 3.3,
+//		"d": []string{"4"},
+//		"e": nil,
+//	  })
 func sqlTemplateSyntaxParse(text string) (operation, name, flag, opts string, err error) {
 	// 去头去尾
 	temp := strings.TrimSpace(text)
@@ -298,73 +350,13 @@ func sqlTemplateSyntaxParse(text string) (operation, name, flag, opts string, er
 }
 
 // sql模板解析
-//
-// 语法格式1:   (操作符)(name)   示例:   &a   |a
-// 语法格式2:   {(操作符)(name)}   示例:   {&a}   {|a}
-// 语法格式3:   {(操作符)(name) (对比标志)}   示例:   {&a in}   {|a >}
-// 语法格式4:   {(操作符)(name) (对比标志) (选项)}   示例:   {&a in i}   {|a > id}
-//     选项:
-//          i:   ignore, 如果参数值为该类型的零值则忽略
-//          d:   direct, 直接将值写入sql语句中
-//
-// 操作符支持:
-//     @: 直接赋值, 如果没有传值存在外壳转为null无外壳会panic, 这个操作符仅支持以下格式
-//          语法格式1:   (操作符)(name)
-//          语法格式2:   {(操作符)(name)}
-//     &: 转为 and
-//     |: 转为 or
-//
-// 对比标志支持:   >   >=   <   <=   !=   <>   =   in   notin   like   likestart    like_start   likeend   like_end
-//
-// 输入的kvs必须为：map[string]string, map[string]interface{}, 或健值对
-//
-// 注意:
-//     如果name没有传参, 则替换为空字符串
-//     如果name的值为nil, 则结果为: (操作符) (name) is null
-//     如果name的值是一个切片, 结果会用逗号连接起来且外面会加上小括号. 如 []string{"a", "b"} 会转为 ("a", "b")
-//
-// 示例:
-//    s := SqlTemplateRender("select * from t where &a {&b} {&c !=} {&d in} {|e} limit 1", map[string]interface{}{
-//		"a": 1,
-//		"b": "2",
-//		"c": 3.3,
-//		"d": []string{"4"},
-//		"e": nil,
-//	  })
 func SqlTemplateParse(sql_template string, kvs ...interface{}) (sql_str string, names []string, args []interface{}) {
 	return newSqlTemplate(kvs...).Parse(sql_template)
 }
 
-// sql模板渲染, 注意, 这个函数不支持sql注入检查
+// sql模板渲染
 //
-// 语法格式1:   (操作符)(name)   示例:   &a   |a
-// 语法格式2:   {(操作符)(name)}   示例:   {&a}   {|a}
-// 语法格式3:   {(操作符)(name) (对比标志)}   示例:   {&a in}   {|a >}
-//
-// 操作符支持:
-//     @: 直接赋值, 如果没有传值存在外壳转为null无外壳会panic, 这个操作符仅支持以下格式
-//          语法格式1:   (操作符)(name)
-//          语法格式2:   {(操作符)(name)}
-//     &: 转为 and
-//     |: 转为 or
-//
-// 对比标志支持:   >   >=   <   <=   !=   <>   =   in   notin   like   likestart    like_start   likeend   like_end
-//
-// 输入的kvs必须为：map[string]string, map[string]interface{}, 或健值对
-//
-// 注意:
-//     如果name没有传参, 则替换为空字符串
-//     如果name的值为nil, 则结果为: (操作符) (name) is null
-//     如果name的值是一个切片, 结果会用逗号连接起来且外面会加上小括号. 如 []string{"a", "b"} 会转为 ("a", "b")
-//
-// 示例:
-//    s := SqlTemplateRender("select * from t where &a {&b} {&c !=} {&d in} {|e} limit 1", map[string]interface{}{
-//		"a": 1,
-//		"b": "2",
-//		"c": 3.3,
-//		"d": []string{"4"},
-//		"e": nil,
-//	  })
+// 值会直接写入sql语句中, 不支持sql注入检查
 func SqlTemplateRender(sql_template string, kvs ...interface{}) string {
 	data := makeMapOfkvs(kvs)
 	result := sqlTemplateRegexCrust.ReplaceAllStringFunc(sql_template, func(s string) string {
@@ -386,11 +378,14 @@ func SqlTemplateRender(sql_template string, kvs ...interface{}) string {
 
 func sqlTranslate(operation, name, flag string, opts string, crust bool, m map[string]interface{}) string {
 	// 选项检查
-	var ignore_opt bool
+	var ignore_opt, must_opt bool
 	for _, o := range opts {
 		switch o {
 		case 'i':
 			ignore_opt = true
+		case 'd':
+		case 'm':
+			must_opt = true
 		default:
 			panic(fmt.Sprintf(`syntax error, non-supported option "%s"`, string(o)))
 		}
@@ -398,21 +393,37 @@ func sqlTranslate(operation, name, flag string, opts string, crust bool, m map[s
 
 	value, has := m[name]
 
-	switch operation {
-	case "@":
-		if has {
-			return anyToSqlString(value, true)
+	// 无值返回空sql语句
+	if !has {
+		if must_opt {
+			panic(fmt.Sprintf(`"%s" must have a value`, name))
 		}
-		if crust {
+		return ""
+	}
+
+	// 忽略模式, 零值返回空sql语句
+	if ignore_opt && IsZero(value) {
+		return ""
+	}
+
+	switch operation {
+	case "@", "#":
+		// nil改为null
+		if value == nil {
 			return "null"
 		}
-		panic(fmt.Sprintf(`"%s" must have a value`, name))
+		return anyToSqlString(value, true)
 	case "&":
 		operation = "and"
 	case "|":
 		operation = "or"
 	default:
 		panic(fmt.Errorf(`syntax error, non-supported operation "%s"`, operation))
+	}
+
+	// nil 改为 is null
+	if value == nil {
+		return fmt.Sprintf(`%s %s is null`, operation, name)
 	}
 
 	var sql_str string
@@ -431,21 +442,6 @@ func sqlTranslate(operation, name, flag string, opts string, crust bool, m map[s
 		sql_str = fmt.Sprintf(`%s %s like "%%%s"`, operation, name, anyToSqlString(value, false))
 	default:
 		panic(fmt.Errorf(`syntax error, non-supported flag "%s"`, flag))
-	}
-
-	// 无值返回空sql语句
-	if !has {
-		return ""
-	}
-
-	// 忽略模式, 零值返回空sql语句
-	if ignore_opt && IsZero(value) {
-		return ""
-	}
-
-	// nil 改为 is null
-	if value == nil {
-		return fmt.Sprintf(`%s %s is null`, operation, name)
 	}
 
 	return sql_str
