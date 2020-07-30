@@ -17,7 +17,6 @@ var repairSqlRegs = []struct {
 	re    *regexp.Regexp
 	value string
 }{
-	{regexp.MustCompile(`\s+`), " "},
 	{regexp.MustCompile(`where\s*order by`), "order by"},
 	{regexp.MustCompile(`where\s*group by`), "group by"},
 	{regexp.MustCompile(`where\s*limit`), "limit"},
@@ -40,8 +39,12 @@ var repairSqlRegs = []struct {
 // 修复模板渲染后无效的sql语句
 func repairSql(sql string) string {
 	var result = strings.ToLower(sql)
-	for _, repair := range repairSqlRegs {
-		result = repair.re.ReplaceAllString(result, repair.value)
+	result = emptyStrRegex.ReplaceAllString(result, " ")
+
+	if strings.Contains(result, "where") {
+		for _, repair := range repairSqlRegs {
+			result = repair.re.ReplaceAllString(result, repair.value)
+		}
 	}
 	return result
 }
