@@ -129,6 +129,10 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 			panic(fmt.Sprintf(`syntax error, non-supported option "%s"`, string(o)))
 		}
 	}
+	if operation == "@" {
+		ignore_opt = true
+		direct_opt = true
+	}
 
 	value, has := m.data[name]
 
@@ -147,9 +151,10 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 
 	// 操作检查
 	switch operation {
-	case "@":
-		direct_opt = true
-		fallthrough
+	case "&":
+		operation = "and"
+	case "|":
+		operation = "or"
 	case "#":
 		// nil改为null
 		if value == nil {
@@ -159,10 +164,8 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 			return anyToSqlString(value, true)
 		}
 		return m.addValue(name, value)
-	case "&":
-		operation = "and"
-	case "|":
-		operation = "or"
+	case "@": // ignore + direct
+		return anyToSqlString(value, false)
 	default:
 		panic(fmt.Errorf(`syntax error, non-supported operation "%s"`, operation))
 	}
@@ -247,7 +250,11 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 //          (操作符)(name)
 //          {(操作符)(name)}
 //          {(操作符)(name) (选项)}
-//     @: 同 # 操作符, 但是它自带 direct 选项
+//     @: 自带 ignore 和 direct 选项, 且不会为字符串加上引号, 仅支持以下格式, 一般用于写入一条语句
+//          (操作符)(name)
+//          {(操作符)(name)}
+//          {(操作符)(name) (选项)}
+//
 //
 // name:   示例:    a   a2   a_2   a_2.b   a_2.b_2
 //
@@ -390,6 +397,9 @@ func sqlTranslate(operation, name, flag string, opts string, crust bool, m map[s
 			panic(fmt.Sprintf(`syntax error, non-supported option "%s"`, string(o)))
 		}
 	}
+	if operation == "@" {
+		ignore_opt = true
+	}
 
 	value, has := m[name]
 
@@ -407,16 +417,18 @@ func sqlTranslate(operation, name, flag string, opts string, crust bool, m map[s
 	}
 
 	switch operation {
-	case "@", "#":
+	case "&":
+		operation = "and"
+	case "|":
+		operation = "or"
+	case "#":
 		// nil改为null
 		if value == nil {
 			return "null"
 		}
 		return anyToSqlString(value, true)
-	case "&":
-		operation = "and"
-	case "|":
-		operation = "or"
+	case "@":
+		return anyToSqlString(value, false)
 	default:
 		panic(fmt.Errorf(`syntax error, non-supported operation "%s"`, operation))
 	}
