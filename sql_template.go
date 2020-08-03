@@ -58,7 +58,7 @@ var (
 	}
 	// 选项
 	sqlTemplateOptsMapp = map[int32]struct{}{
-		'i': {}, // ignore, 零值忽略
+		'a': {}, // attention, 不会忽略参数值为该类型的零值
 		'd': {}, // direct, 直接将值写入sql语句
 		'm': {}, // must, 必填
 	}
@@ -116,11 +116,11 @@ func (m *sqlTemplate) Parse(sql_template string) (sql_str string, names []string
 
 func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust bool) string {
 	// 选项检查
-	var ignore_opt, direct_opt, must_opt bool
+	var attention_opt, direct_opt, must_opt bool
 	for _, o := range opts {
 		switch o {
-		case 'i':
-			ignore_opt = true
+		case 'a':
+			attention_opt = true
 		case 'd':
 			direct_opt = true
 		case 'm':
@@ -130,7 +130,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 		}
 	}
 	if operation == "@" {
-		ignore_opt = true
+		attention_opt = false
 		direct_opt = true
 	}
 
@@ -144,8 +144,8 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 		return ""
 	}
 
-	// 忽略模式且值为零值返回空sql语句
-	if ignore_opt && IsZero(value) {
+	// 非注意模式且值为零值返回空sql语句
+	if !attention_opt && IsZero(value) {
 		return ""
 	}
 
@@ -164,7 +164,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 			return anyToSqlString(value, true)
 		}
 		return m.addValue(name, value)
-	case "@": // ignore + direct
+	case "@": // !attention_opt + direct
 		return anyToSqlString(value, false)
 	default:
 		panic(fmt.Errorf(`syntax error, non-supported operation "%s"`, operation))
@@ -250,7 +250,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 //          (操作符)(name)
 //          {(操作符)(name)}
 //          {(操作符)(name) (选项)}
-//     @: 自带 ignore 和 direct 选项, 且不会为字符串加上引号, 仅支持以下格式, 一般用于写入一条语句
+//     @: attention 选项无效且自带 direct 选项, 且不会为字符串加上引号, 仅支持以下格式, 一般用于写入一条语句
 //          (操作符)(name)
 //          {(操作符)(name)}
 //          {(操作符)(name) (选项)}
@@ -261,14 +261,14 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 // 标志:   >   >=   <   <=   !=   <>   =   in   notin   like   likestart    like_start   likeend   like_end
 //
 // 选项:
-//     i:   ignore, 如果参数值为该类型的零值则忽略
+//     a:   attention, 不会忽略参数值为该类型的零值
 //     d:   direct, 直接将值写入sql语句中
 //     m:   must, 必须传值, 值可以为零值
 //
 // 输入的kvs必须为：map[string]string, map[string]interface{}, 或健值对
 //
 // 注意:
-//     如果name没有传参, 则替换为空字符串
+//     如果name没有传参或为该类型的零值, 则替换为空字符串
 //     如果name的值为nil, 则结果为: (操作符) (name) is null
 //     如果name的值是一个切片, 结果会用逗号连接起来且外面会加上小括号. 如 []string{"a", "b"} 会转为 ("a", "b")
 //
@@ -385,11 +385,11 @@ func SqlTemplateRender(sql_template string, kvs ...interface{}) string {
 
 func sqlTranslate(operation, name, flag string, opts string, crust bool, m map[string]interface{}) string {
 	// 选项检查
-	var ignore_opt, must_opt bool
+	var attention_opt, must_opt bool
 	for _, o := range opts {
 		switch o {
-		case 'i':
-			ignore_opt = true
+		case 'a':
+			attention_opt = true
 		case 'd':
 		case 'm':
 			must_opt = true
@@ -398,7 +398,7 @@ func sqlTranslate(operation, name, flag string, opts string, crust bool, m map[s
 		}
 	}
 	if operation == "@" {
-		ignore_opt = true
+		attention_opt = false
 	}
 
 	value, has := m[name]
@@ -411,8 +411,8 @@ func sqlTranslate(operation, name, flag string, opts string, crust bool, m map[s
 		return ""
 	}
 
-	// 忽略模式, 零值返回空sql语句
-	if ignore_opt && IsZero(value) {
+	// 非注意模式, 零值返回空sql语句
+	if !attention_opt && IsZero(value) {
 		return ""
 	}
 
