@@ -9,6 +9,11 @@
 package zstr
 
 // 构建map, 支持 map[string]string，map[string]interface{}，或健值对
+func MakeMapOfKvs(kvs ...interface{}) map[string]interface{}{
+	return makeMapOfkvs(kvs)
+}
+
+// 构建map, 支持 map[string]string，map[string]interface{}，或健值对
 func makeMapOfkvs(kvs []interface{}) map[string]interface{} {
 	var data = make(map[string]interface{})
 	if len(kvs) == 0 {
