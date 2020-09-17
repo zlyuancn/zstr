@@ -64,11 +64,7 @@ func anyToString(a interface{}) string {
 
 // 任何值转sql需要的字符串
 func AnyToSqlStr(a interface{}, str_crust ...bool) string {
-	var b bool
-	if len(str_crust) > 0 {
-		b = str_crust[0]
-	}
-	return anyToSqlString(a, b)
+	return anyToSqlString(a, len(str_crust) > 0 && str_crust[0])
 }
 
 // 任何值转sql需要的字符串
