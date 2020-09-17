@@ -16,6 +16,11 @@ import (
 )
 
 // 任何值转字符串
+func AnyToStr(a interface{}) string {
+	return anyToString(a)
+}
+
+// 任何值转字符串
 func anyToString(a interface{}) string {
 	switch v := a.(type) {
 
@@ -55,6 +60,11 @@ func anyToString(a interface{}) string {
 		return strconv.FormatUint(v, 10)
 	}
 	return fmt.Sprint(a)
+}
+
+// 任何值转sql需要的字符串
+func AnyToSqlStr(a interface{}, str_crust bool) string {
+	return anyToString(a)
 }
 
 // 任何值转sql需要的字符串
