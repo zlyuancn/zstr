@@ -37,10 +37,7 @@ func (m *String) BoolDefault(def ...bool) bool {
     if a, err := m.Bool(); err == nil {
         return a
     }
-    if len(def) > 0 {
-        return def[0]
-    }
-    return false
+    return len(def) > 0 && def[0]
 }
 
 func (m *String) Int() (int, error) {

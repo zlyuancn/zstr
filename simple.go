@@ -30,10 +30,7 @@ func ToBoolDefault(s string, def ...bool) bool {
     if a, err := ToBool(s); err == nil {
         return a
     }
-    if len(def) > 0 {
-        return def[0]
-    }
-    return false
+    return len(def) > 0 && def[0]
 }
 
 func ToInt(s string) (int, error) {
