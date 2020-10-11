@@ -9,23 +9,23 @@
 package zstr
 
 import (
-    "testing"
+	"testing"
 )
 
 func TestString_Bool(t *testing.T) {
-    s := New("1")
-    b, err := s.Bool()
-    if err != nil {
-        t.Fatal(err)
-    }
-    t.Log(b)
+	s := New("1")
+	b, err := s.Bool()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(b)
 }
 
 func TestString_Scan(t *testing.T) {
-    s := New("1")
-    b := false
-    if err := s.Scan(&b); err != nil {
-        t.Fatal(err)
-    }
-    t.Log(b)
+	s := New("1")
+	b := false
+	if err := s.Scan(&b); err != nil {
+		t.Fatal(err)
+	}
+	t.Log(b)
 }
