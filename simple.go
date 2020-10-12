@@ -325,3 +325,7 @@ func GetFloat64(s string, def ...float64) float64 {
 	}
 	return 0
 }
+
+func ToString(a interface{}) string {
+	return anyToString(a)
+}
