@@ -53,6 +53,16 @@ func ToIntDefault(s string, def ...int) int {
 	return 0
 }
 func GetInt(any interface{}, def ...int) int {
+	switch v := any.(type) {
+	case nil:
+		return 0
+	case bool:
+		if v {
+			return 1
+		}
+		return 0
+	}
+
 	s := anyToString(any)
 	if a, err := strconv.Atoi(s); err == nil {
 		return a
@@ -79,6 +89,16 @@ func ToInt8Default(s string, def ...int8) int8 {
 	return 0
 }
 func GetInt8(any interface{}, def ...int8) int8 {
+	switch v := any.(type) {
+	case nil:
+		return 0
+	case bool:
+		if v {
+			return 1
+		}
+		return 0
+	}
+
 	s := anyToString(any)
 	if a, err := strconv.ParseInt(s, 10, 8); err == nil {
 		return int8(a)
@@ -105,6 +125,16 @@ func ToInt16Default(s string, def ...int16) int16 {
 	return 0
 }
 func GetInt16(any interface{}, def ...int16) int16 {
+	switch v := any.(type) {
+	case nil:
+		return 0
+	case bool:
+		if v {
+			return 1
+		}
+		return 0
+	}
+
 	s := anyToString(any)
 	if a, err := strconv.ParseInt(s, 10, 16); err == nil {
 		return int16(a)
@@ -131,6 +161,16 @@ func ToInt32Default(s string, def ...int32) int32 {
 	return 0
 }
 func GetInt32(any interface{}, def ...int32) int32 {
+	switch v := any.(type) {
+	case nil:
+		return 0
+	case bool:
+		if v {
+			return 1
+		}
+		return 0
+	}
+
 	s := anyToString(any)
 	if a, err := strconv.ParseInt(s, 10, 32); err == nil {
 		return int32(a)
@@ -153,6 +193,16 @@ func ToInt64Default(s string, def ...int64) int64 {
 	return 0
 }
 func GetInt64(any interface{}, def ...int64) int64 {
+	switch v := any.(type) {
+	case nil:
+		return 0
+	case bool:
+		if v {
+			return 1
+		}
+		return 0
+	}
+
 	s := anyToString(any)
 	if a, err := strconv.ParseInt(s, 10, 64); err == nil {
 		return a
@@ -180,6 +230,16 @@ func ToUintDefault(s string, def ...uint) uint {
 	return 0
 }
 func GetUint(any interface{}, def ...uint) uint {
+	switch v := any.(type) {
+	case nil:
+		return 0
+	case bool:
+		if v {
+			return 1
+		}
+		return 0
+	}
+
 	s := anyToString(any)
 	if a, err := strconv.ParseUint(s, 10, 64); err == nil {
 		return uint(a)
@@ -206,6 +266,16 @@ func ToUint8Default(s string, def ...uint8) uint8 {
 	return 0
 }
 func GetUint8(any interface{}, def ...uint8) uint8 {
+	switch v := any.(type) {
+	case nil:
+		return 0
+	case bool:
+		if v {
+			return 1
+		}
+		return 0
+	}
+
 	s := anyToString(any)
 	if a, err := strconv.ParseUint(s, 10, 8); err == nil {
 		return uint8(a)
@@ -232,6 +302,16 @@ func ToUint16Default(s string, def ...uint16) uint16 {
 	return 0
 }
 func GetUint16(any interface{}, def ...uint16) uint16 {
+	switch v := any.(type) {
+	case nil:
+		return 0
+	case bool:
+		if v {
+			return 1
+		}
+		return 0
+	}
+
 	s := anyToString(any)
 	if a, err := strconv.ParseUint(s, 10, 16); err == nil {
 		return uint16(a)
@@ -258,6 +338,16 @@ func ToUint32Default(s string, def ...uint32) uint32 {
 	return 0
 }
 func GetUint32(any interface{}, def ...uint32) uint32 {
+	switch v := any.(type) {
+	case nil:
+		return 0
+	case bool:
+		if v {
+			return 1
+		}
+		return 0
+	}
+
 	s := anyToString(any)
 	if a, err := strconv.ParseUint(s, 10, 32); err == nil {
 		return uint32(a)
@@ -280,6 +370,16 @@ func ToUint64Default(s string, def ...uint64) uint64 {
 	return 0
 }
 func GetUint64(any interface{}, def ...uint64) uint64 {
+	switch v := any.(type) {
+	case nil:
+		return 0
+	case bool:
+		if v {
+			return 1
+		}
+		return 0
+	}
+
 	s := anyToString(any)
 	if a, err := strconv.ParseUint(s, 10, 64); err == nil {
 		return a
@@ -307,6 +407,16 @@ func ToFloat32Default(s string, def ...float32) float32 {
 	return 0
 }
 func GetFloat32(any interface{}, def ...float32) float32 {
+	switch v := any.(type) {
+	case nil:
+		return 0
+	case bool:
+		if v {
+			return 1
+		}
+		return 0
+	}
+
 	s := anyToString(any)
 	if a, err := strconv.ParseFloat(s, 32); err == nil {
 		return float32(a)
@@ -329,6 +439,16 @@ func ToFloat64Default(s string, def ...float64) float64 {
 	return 0
 }
 func GetFloat64(any interface{}, def ...float64) float64 {
+	switch v := any.(type) {
+	case nil:
+		return 0
+	case bool:
+		if v {
+			return 1
+		}
+		return 0
+	}
+
 	s := anyToString(any)
 	if a, err := strconv.ParseFloat(s, 64); err == nil {
 		return a
