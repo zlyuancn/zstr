@@ -32,7 +32,8 @@ func ToBoolDefault(s string, def ...bool) bool {
 	}
 	return len(def) > 0 && def[0]
 }
-func GetBool(s string, def ...bool) bool {
+func GetBool(any interface{}, def ...bool) bool {
+	s := anyToString(any)
 	if a, err := ToBool(s); err == nil {
 		return a
 	}
@@ -51,7 +52,8 @@ func ToIntDefault(s string, def ...int) int {
 	}
 	return 0
 }
-func GetInt(s string, def ...int) int {
+func GetInt(any interface{}, def ...int) int {
+	s := anyToString(any)
 	if a, err := strconv.Atoi(s); err == nil {
 		return a
 	}
@@ -76,7 +78,8 @@ func ToInt8Default(s string, def ...int8) int8 {
 	}
 	return 0
 }
-func GetInt8(s string, def ...int8) int8 {
+func GetInt8(any interface{}, def ...int8) int8 {
+	s := anyToString(any)
 	if a, err := strconv.ParseInt(s, 10, 8); err == nil {
 		return int8(a)
 	}
@@ -101,7 +104,8 @@ func ToInt16Default(s string, def ...int16) int16 {
 	}
 	return 0
 }
-func GetInt16(s string, def ...int16) int16 {
+func GetInt16(any interface{}, def ...int16) int16 {
+	s := anyToString(any)
 	if a, err := strconv.ParseInt(s, 10, 16); err == nil {
 		return int16(a)
 	}
@@ -126,7 +130,8 @@ func ToInt32Default(s string, def ...int32) int32 {
 	}
 	return 0
 }
-func GetInt32(s string, def ...int32) int32 {
+func GetInt32(any interface{}, def ...int32) int32 {
+	s := anyToString(any)
 	if a, err := strconv.ParseInt(s, 10, 32); err == nil {
 		return int32(a)
 	}
@@ -147,7 +152,8 @@ func ToInt64Default(s string, def ...int64) int64 {
 	}
 	return 0
 }
-func GetInt64(s string, def ...int64) int64 {
+func GetInt64(any interface{}, def ...int64) int64 {
+	s := anyToString(any)
 	if a, err := strconv.ParseInt(s, 10, 64); err == nil {
 		return a
 	}
@@ -173,7 +179,8 @@ func ToUintDefault(s string, def ...uint) uint {
 	}
 	return 0
 }
-func GetUint(s string, def ...uint) uint {
+func GetUint(any interface{}, def ...uint) uint {
+	s := anyToString(any)
 	if a, err := strconv.ParseUint(s, 10, 64); err == nil {
 		return uint(a)
 	}
@@ -198,7 +205,8 @@ func ToUint8Default(s string, def ...uint8) uint8 {
 	}
 	return 0
 }
-func GetUint8(s string, def ...uint8) uint8 {
+func GetUint8(any interface{}, def ...uint8) uint8 {
+	s := anyToString(any)
 	if a, err := strconv.ParseUint(s, 10, 8); err == nil {
 		return uint8(a)
 	}
@@ -223,7 +231,8 @@ func ToUint16Default(s string, def ...uint16) uint16 {
 	}
 	return 0
 }
-func GetUint16(s string, def ...uint16) uint16 {
+func GetUint16(any interface{}, def ...uint16) uint16 {
+	s := anyToString(any)
 	if a, err := strconv.ParseUint(s, 10, 16); err == nil {
 		return uint16(a)
 	}
@@ -248,7 +257,8 @@ func ToUint32Default(s string, def ...uint32) uint32 {
 	}
 	return 0
 }
-func GetUint32(s string, def ...uint32) uint32 {
+func GetUint32(any interface{}, def ...uint32) uint32 {
+	s := anyToString(any)
 	if a, err := strconv.ParseUint(s, 10, 32); err == nil {
 		return uint32(a)
 	}
@@ -269,7 +279,8 @@ func ToUint64Default(s string, def ...uint64) uint64 {
 	}
 	return 0
 }
-func GetUint64(s string, def ...uint64) uint64 {
+func GetUint64(any interface{}, def ...uint64) uint64 {
+	s := anyToString(any)
 	if a, err := strconv.ParseUint(s, 10, 64); err == nil {
 		return a
 	}
@@ -295,7 +306,8 @@ func ToFloat32Default(s string, def ...float32) float32 {
 	}
 	return 0
 }
-func GetFloat32(s string, def ...float32) float32 {
+func GetFloat32(any interface{}, def ...float32) float32 {
+	s := anyToString(any)
 	if a, err := strconv.ParseFloat(s, 32); err == nil {
 		return float32(a)
 	}
@@ -316,7 +328,8 @@ func ToFloat64Default(s string, def ...float64) float64 {
 	}
 	return 0
 }
-func GetFloat64(s string, def ...float64) float64 {
+func GetFloat64(any interface{}, def ...float64) float64 {
+	s := anyToString(any)
 	if a, err := strconv.ParseFloat(s, 64); err == nil {
 		return a
 	}
