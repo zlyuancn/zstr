@@ -33,6 +33,13 @@ func ToBoolDefault(s string, def ...bool) bool {
 	return len(def) > 0 && def[0]
 }
 func GetBool(any interface{}, def ...bool) bool {
+	switch v:=any.(type) {
+	case nil:
+		return false
+	case bool:
+		return v
+	}
+
 	s := anyToString(any)
 	if a, err := ToBool(s); err == nil {
 		return a
