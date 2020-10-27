@@ -10,6 +10,7 @@ package zstr
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -188,14 +189,22 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 		}
 	case "in":
 		makeSqlStr = func() string {
-			return fmt.Sprintf(`%s %s %s (%s)`, operation, name, flag, m.addValue(name, value))
+			var fs []string
+			for i, s := range m.parseToSlice(value) {
+				fs = append(fs, m.addValue(fmt.Sprintf("%s.in(%d)", name, i), s))
+			}
+			return fmt.Sprintf(`%s %s in (%s)`, operation, name, strings.Join(fs, ","))
 		}
 		directWrite = func() string {
-			return fmt.Sprintf(`%s %s %s %s`, operation, name, flag, anyToSqlString(value, true))
+			return fmt.Sprintf(`%s %s in %s`, operation, name, anyToSqlString(value, true))
 		}
 	case "notin", "not_in":
 		makeSqlStr = func() string {
-			return fmt.Sprintf(`%s %s not in (%s)`, operation, name, m.addValue(name, value))
+			var fs []string
+			for i, s := range m.parseToSlice(value) {
+				fs = append(fs, m.addValue(fmt.Sprintf("%s.in(%d)", name, i), s))
+			}
+			return fmt.Sprintf(`%s %s not in (%s)`, operation, name, strings.Join(fs, ","))
 		}
 		directWrite = func() string {
 			return fmt.Sprintf(`%s %s not in %s`, operation, name, anyToSqlString(value, true))
@@ -235,6 +244,34 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 	return makeSqlStr()
 }
 
+// 将数据解析为切片
+func (m *sqlTemplate) parseToSlice(a interface{}) []interface{} {
+	switch v := a.(type) {
+
+	case nil:
+		return []interface{}{"null"}
+
+	case string, []byte, bool,
+		int, int8, int16, int32, int64,
+		uint, uint8, uint16, uint32, uint64,
+		float32, float64:
+		return []interface{}{v}
+	}
+
+	r_v := reflect.Indirect(reflect.ValueOf(a))
+	if r_v.Kind() != reflect.Slice && r_v.Kind() != reflect.Array {
+		return []interface{}{fmt.Sprint(a)}
+	}
+
+	l := r_v.Len()
+	out := make([]interface{}, 0, l)
+	for i := 0; i < l; i++ {
+		v := reflect.Indirect(r_v.Index(i)).Interface()
+		out = append(out, m.parseToSlice(v)...)
+	}
+	return out
+}
+
 // sql模板语法解析
 //
 // 语法格式:   (操作符)(name)
@@ -258,7 +295,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 //
 // name:   示例:    a   a2   a_2   a_2.b   a_2.b_2
 //
-// 标志:   >   >=   <   <=   !=   <>   =   in   notin   like   likestart    like_start   likeend   like_end
+// 标志:   >   >=   <   <=   !=   <>   =   in   notin   not_in   like   likestart    like_start   likeend   like_end
 //
 // 选项:
 //     a:   attention, 不会忽略参数值为该类型的零值
@@ -443,7 +480,7 @@ func sqlTranslate(operation, name, flag string, opts string, crust bool, m map[s
 	case ">", ">=", "<", "<=", "!=", "<>", "=":
 		sql_str = fmt.Sprintf(`%s %s %s %s`, operation, name, flag, anyToSqlString(value, true))
 	case "in":
-		sql_str = fmt.Sprintf(`%s %s %s %s`, operation, name, flag, anyToSqlString(value, true))
+		sql_str = fmt.Sprintf(`%s %s in %s`, operation, name, anyToSqlString(value, true))
 	case "notin", "not_in":
 		sql_str = fmt.Sprintf(`%s %s not in %s`, operation, name, anyToSqlString(value, true))
 	case "like": // 包含xx
