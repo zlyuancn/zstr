@@ -226,7 +226,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 			}
 			var fs []string
 			for i, s := range values {
-				fs = append(fs, m.addValue(fmt.Sprintf("%s.in(%d)", name, i), s))
+				fs = append(fs, m.addValue(fmt.Sprintf("%s.not_in(%d)", name, i), s))
 			}
 			return fmt.Sprintf(`%s %s not in (%s)`, operation, name, strings.Join(fs, ","))
 		}
