@@ -193,6 +193,9 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 			return ""
 		}
 		makeSqlStr = func() string {
+			if len(values) == 1 {
+				return fmt.Sprintf(`%s %s = %s`, operation, name, m.addValue(name, values[0]))
+			}
 			var fs []string
 			for i, s := range values {
 				fs = append(fs, m.addValue(fmt.Sprintf("%s.in(%d)", name, i), s))
@@ -200,6 +203,9 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 			return fmt.Sprintf(`%s %s in (%s)`, operation, name, strings.Join(fs, ","))
 		}
 		directWrite = func() string {
+			if len(values) == 1 {
+				return fmt.Sprintf(`%s %s = %s`, operation, name, anyToSqlString(values[0], true))
+			}
 			return fmt.Sprintf(`%s %s in %s`, operation, name, anyToSqlString(value, true))
 		}
 	case "notin", "not_in":
@@ -208,6 +214,9 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 			return ""
 		}
 		makeSqlStr = func() string {
+			if len(values) == 1 {
+				return fmt.Sprintf(`%s %s != %s`, operation, name, m.addValue(name, values[0]))
+			}
 			var fs []string
 			for i, s := range values {
 				fs = append(fs, m.addValue(fmt.Sprintf("%s.in(%d)", name, i), s))
@@ -215,6 +224,9 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 			return fmt.Sprintf(`%s %s not in (%s)`, operation, name, strings.Join(fs, ","))
 		}
 		directWrite = func() string {
+			if len(values) == 1 {
+				return fmt.Sprintf(`%s %s != %s`, operation, name, anyToSqlString(values[0], true))
+			}
 			return fmt.Sprintf(`%s %s not in %s`, operation, name, anyToSqlString(value, true))
 		}
 	case "like": // 包含xx
@@ -492,11 +504,17 @@ func sqlTranslate(operation, name, flag string, opts string, crust bool, m map[s
 		if len(values) == 0 {
 			return ""
 		}
+		if len(values) == 1 {
+			return fmt.Sprintf(`%s %s = %s`, operation, name, anyToSqlString(values[0], true))
+		}
 		sql_str = fmt.Sprintf(`%s %s in %s`, operation, name, anyToSqlString(value, true))
 	case "notin", "not_in":
 		values := parseToSlice(value)
 		if len(values) == 0 {
 			return ""
+		}
+		if len(values) == 1 {
+			return fmt.Sprintf(`%s %s != %s`, operation, name, anyToSqlString(values[0], true))
 		}
 		sql_str = fmt.Sprintf(`%s %s not in %s`, operation, name, anyToSqlString(value, true))
 	case "like": // 包含xx
