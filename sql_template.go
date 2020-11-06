@@ -171,9 +171,16 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 		panic(fmt.Errorf(`syntax error, non-supported operation "%s"`, operation))
 	}
 
-	// nil 改为 is null
+	// nil 修改语句
 	if value == nil {
-		return fmt.Sprintf(`%s %s is null`, operation, name)
+		switch flag {
+		case "!=", "<>", "notin", "not_in", ">", "<":
+			return fmt.Sprintf(`%s %s is not null`, operation, name)
+		case "=", "like", "likestart", "like_start", "likeend", "like_end":
+			return fmt.Sprintf(`%s %s is null`, operation, name)
+		case "in", ">=", "<=":
+			return ""
+		}
 	}
 
 	var makeSqlStr func() string
@@ -490,9 +497,16 @@ func sqlTranslate(operation, name, flag string, opts string, crust bool, m map[s
 		panic(fmt.Errorf(`syntax error, non-supported operation "%s"`, operation))
 	}
 
-	// nil 改为 is null
+	// nil 修改语句
 	if value == nil {
-		return fmt.Sprintf(`%s %s is null`, operation, name)
+		switch flag {
+		case "!=", "<>", "notin", "not_in", ">", "<":
+			return fmt.Sprintf(`%s %s is not null`, operation, name)
+		case "=", "like", "likestart", "like_start", "likeend", "like_end":
+			return fmt.Sprintf(`%s %s is null`, operation, name)
+		case "in", ">=", "<=":
+			return ""
+		}
 	}
 
 	var sql_str string
