@@ -188,9 +188,13 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 			return fmt.Sprintf(`%s %s %s %s`, operation, name, flag, anyToSqlString(value, true))
 		}
 	case "in":
+		values := parseToSlice(value)
+		if len(values) == 0 {
+			return ""
+		}
 		makeSqlStr = func() string {
 			var fs []string
-			for i, s := range parseToSlice(value) {
+			for i, s := range values {
 				fs = append(fs, m.addValue(fmt.Sprintf("%s.in(%d)", name, i), s))
 			}
 			return fmt.Sprintf(`%s %s in (%s)`, operation, name, strings.Join(fs, ","))
@@ -199,9 +203,13 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 			return fmt.Sprintf(`%s %s in %s`, operation, name, anyToSqlString(value, true))
 		}
 	case "notin", "not_in":
+		values := parseToSlice(value)
+		if len(values) == 0 {
+			return ""
+		}
 		makeSqlStr = func() string {
 			var fs []string
-			for i, s := range parseToSlice(value) {
+			for i, s := range values {
 				fs = append(fs, m.addValue(fmt.Sprintf("%s.in(%d)", name, i), s))
 			}
 			return fmt.Sprintf(`%s %s not in (%s)`, operation, name, strings.Join(fs, ","))
@@ -480,8 +488,16 @@ func sqlTranslate(operation, name, flag string, opts string, crust bool, m map[s
 	case ">", ">=", "<", "<=", "!=", "<>", "=":
 		sql_str = fmt.Sprintf(`%s %s %s %s`, operation, name, flag, anyToSqlString(value, true))
 	case "in":
+		values := parseToSlice(value)
+		if len(values) == 0 {
+			return ""
+		}
 		sql_str = fmt.Sprintf(`%s %s in %s`, operation, name, anyToSqlString(value, true))
 	case "notin", "not_in":
+		values := parseToSlice(value)
+		if len(values) == 0 {
+			return ""
+		}
 		sql_str = fmt.Sprintf(`%s %s not in %s`, operation, name, anyToSqlString(value, true))
 	case "like": // 包含xx
 		sql_str = fmt.Sprintf(`%s %s like "%%%s%%"`, operation, name, anyToSqlString(value, false))
