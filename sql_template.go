@@ -190,7 +190,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 	case "in":
 		makeSqlStr = func() string {
 			var fs []string
-			for i, s := range m.parseToSlice(value) {
+			for i, s := range parseToSlice(value) {
 				fs = append(fs, m.addValue(fmt.Sprintf("%s.in(%d)", name, i), s))
 			}
 			return fmt.Sprintf(`%s %s in (%s)`, operation, name, strings.Join(fs, ","))
@@ -201,7 +201,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 	case "notin", "not_in":
 		makeSqlStr = func() string {
 			var fs []string
-			for i, s := range m.parseToSlice(value) {
+			for i, s := range parseToSlice(value) {
 				fs = append(fs, m.addValue(fmt.Sprintf("%s.in(%d)", name, i), s))
 			}
 			return fmt.Sprintf(`%s %s not in (%s)`, operation, name, strings.Join(fs, ","))
@@ -245,7 +245,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 }
 
 // 将数据解析为切片
-func (m *sqlTemplate) parseToSlice(a interface{}) []interface{} {
+func parseToSlice(a interface{}) []interface{} {
 	switch v := a.(type) {
 
 	case nil:
@@ -267,7 +267,7 @@ func (m *sqlTemplate) parseToSlice(a interface{}) []interface{} {
 	out := make([]interface{}, 0, l)
 	for i := 0; i < l; i++ {
 		v := reflect.Indirect(r_v.Index(i)).Interface()
-		out = append(out, m.parseToSlice(v)...)
+		out = append(out, parseToSlice(v)...)
 	}
 	return out
 }
