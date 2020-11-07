@@ -42,3 +42,8 @@ func TemplateRender(format string, kvs ...interface{}) string {
 	})
 	return result
 }
+
+// 模板渲染, 和TemplateRender一样, 只是简短了函数名
+func Render(format string, kvs ...interface{}) string {
+	return TemplateRender(format, kvs...)
+}

@@ -540,9 +540,19 @@ func SqlTemplateParse(sql_template string, kvs ...interface{}) (sql_str string, 
 	return newSqlTemplate(kvs...).Parse(sql_template)
 }
 
+// sql模板解析, 和SqlTemplateParse一样, 只是简短了函数名
+func SqlParse(sql_template string, kvs ...interface{}) (sql_str string, names []string, args []interface{}) {
+	return newSqlTemplate(kvs...).Parse(sql_template)
+}
+
 // sql模板渲染
 //
 // 值会直接写入sql语句中, 不支持sql注入检查
 func SqlTemplateRender(sql_template string, kvs ...interface{}) string {
+	return newSqlTemplate(kvs...).Render(sql_template)
+}
+
+// sql模板渲染, 和SqlTemplateRender一样, 只是简短了函数名
+func SqlRender(sql_template string, kvs ...interface{}) string {
 	return newSqlTemplate(kvs...).Render(sql_template)
 }
