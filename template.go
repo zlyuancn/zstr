@@ -12,8 +12,8 @@ import (
 	"regexp"
 )
 
-var templateRegex = regexp.MustCompile(`@\w+`)
-var templateRegexCrust = regexp.MustCompile(`\{@\w+\}`)
+var templateRegex = regexp.MustCompile(`@\w*\.?\w+`)
+var templateRegexCrust = regexp.MustCompile(`\{@\w*\.?\w+\}`)
 
 // 模板渲染
 //
