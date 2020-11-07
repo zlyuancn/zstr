@@ -88,7 +88,7 @@ func (m *sqlTemplate) addValue(name string, value interface{}) (flag string) {
 
 func (m *sqlTemplate) Parse(sql_template string) (sql_str string, names []string, args []interface{}) {
 	sql_str = sqlTemplateRegexCrust.ReplaceAllStringFunc(sql_template, func(s string) string {
-		operation, name, flag, opts, err := sqlTemplateSyntaxParse(s[1 : len(s)-1])
+		operation, name, flag, opts, err := m.sqlTemplateSyntaxParse(s[1 : len(s)-1])
 		if err != nil {
 			panic(err)
 		}
@@ -96,7 +96,7 @@ func (m *sqlTemplate) Parse(sql_template string) (sql_str string, names []string
 	})
 
 	sql_str = sqlTemplateRegex.ReplaceAllStringFunc(sql_str, func(s string) string {
-		operation, name, flag, opts, err := sqlTemplateSyntaxParse(s)
+		operation, name, flag, opts, err := m.sqlTemplateSyntaxParse(s)
 		if err != nil {
 			panic(err)
 		}
@@ -195,7 +195,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 			return fmt.Sprintf(`%s %s %s %s`, operation, name, flag, anyToSqlString(value, true))
 		}
 	case "in":
-		values := parseToSlice(value)
+		values := m.parseToSlice(value)
 		if len(values) == 0 {
 			return ""
 		}
@@ -216,7 +216,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 			return fmt.Sprintf(`%s %s in %s`, operation, name, anyToSqlString(value, true))
 		}
 	case "notin", "not_in":
-		values := parseToSlice(value)
+		values := m.parseToSlice(value)
 		if len(values) == 0 {
 			return ""
 		}
@@ -271,8 +271,123 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 	return makeSqlStr()
 }
 
+func (m *sqlTemplate) Render(sql_template string) string {
+	result := sqlTemplateRegexCrust.ReplaceAllStringFunc(sql_template, func(s string) string {
+		operation, name, flag, opts, err := m.sqlTemplateSyntaxParse(s[1 : len(s)-1])
+		if err != nil {
+			panic(err)
+		}
+		return m.sqlTranslate(operation, name, flag, opts, true)
+	})
+	result = sqlTemplateRegex.ReplaceAllStringFunc(result, func(s string) string {
+		operation, name, flag, opts, err := m.sqlTemplateSyntaxParse(s)
+		if err != nil {
+			panic(err)
+		}
+		return m.sqlTranslate(operation, name, flag, opts, false)
+	})
+	return repairSql(result)
+}
+
+func (m *sqlTemplate) sqlTranslate(operation, name, flag string, opts string, crust bool) string {
+	// 选项检查
+	var attention_opt, must_opt bool
+	for _, o := range opts {
+		switch o {
+		case 'a':
+			attention_opt = true
+		case 'd':
+		case 'm':
+			must_opt = true
+		default:
+			panic(fmt.Sprintf(`syntax error, non-supported option "%s"`, string(o)))
+		}
+	}
+	if operation == "@" {
+		attention_opt = false
+	}
+
+	value, has := m.data[name]
+
+	// 无值返回空sql语句
+	if !has {
+		if must_opt {
+			panic(fmt.Sprintf(`"%s" must have a value`, name))
+		}
+		return ""
+	}
+
+	// 非注意模式, 零值返回空sql语句
+	if !attention_opt && IsZero(value) {
+		return ""
+	}
+
+	switch operation {
+	case "&":
+		operation = "and"
+	case "|":
+		operation = "or"
+	case "#":
+		// nil改为null
+		if value == nil {
+			return "null"
+		}
+		return anyToSqlString(value, true)
+	case "@":
+		return anyToSqlString(value, false)
+	default:
+		panic(fmt.Errorf(`syntax error, non-supported operation "%s"`, operation))
+	}
+
+	// nil 修改语句
+	if value == nil {
+		switch flag {
+		case "!=", "<>", "notin", "not_in", ">", "<":
+			return fmt.Sprintf(`%s %s is not null`, operation, name)
+		case "=", "like", "likestart", "like_start", "likeend", "like_end":
+			return fmt.Sprintf(`%s %s is null`, operation, name)
+		case "in", ">=", "<=":
+			return ""
+		}
+	}
+
+	var sql_str string
+	switch flag {
+	case ">", ">=", "<", "<=", "!=", "<>", "=":
+		sql_str = fmt.Sprintf(`%s %s %s %s`, operation, name, flag, anyToSqlString(value, true))
+	case "in":
+		values := m.parseToSlice(value)
+		if len(values) == 0 {
+			return ""
+		}
+		if len(values) == 1 {
+			return fmt.Sprintf(`%s %s = %s`, operation, name, anyToSqlString(values[0], true))
+		}
+		sql_str = fmt.Sprintf(`%s %s in %s`, operation, name, anyToSqlString(value, true))
+	case "notin", "not_in":
+		values := m.parseToSlice(value)
+		if len(values) == 0 {
+			return ""
+		}
+		if len(values) == 1 {
+			return fmt.Sprintf(`%s %s != %s`, operation, name, anyToSqlString(values[0], true))
+		}
+		sql_str = fmt.Sprintf(`%s %s not in %s`, operation, name, anyToSqlString(value, true))
+	case "like": // 包含xx
+		sql_str = fmt.Sprintf(`%s %s like "%%%s%%"`, operation, name, anyToSqlString(value, false))
+	case "likestart", "like_start": // 以xx开始
+		sql_str = fmt.Sprintf(`%s %s like "%s%%"`, operation, name, anyToSqlString(value, false))
+	case "likeend", "like_end": // 以xx结束
+		sql_str = fmt.Sprintf(`%s %s like "%%%s"`, operation, name, anyToSqlString(value, false))
+	default:
+		panic(fmt.Errorf(`syntax error, non-supported flag "%s"`, flag))
+	}
+
+	return sql_str
+}
+
 // 将数据解析为切片
-func parseToSlice(a interface{}) []interface{} {
+func (m *sqlTemplate) parseToSlice(a interface{}) []interface{} {
 	switch v := a.(type) {
 
 	case nil:
@@ -294,7 +409,7 @@ func parseToSlice(a interface{}) []interface{} {
 	out := make([]interface{}, 0, l)
 	for i := 0; i < l; i++ {
 		v := reflect.Indirect(r_v.Index(i)).Interface()
-		out = append(out, parseToSlice(v)...)
+		out = append(out, m.parseToSlice(v)...)
 	}
 	return out
 }
@@ -344,7 +459,7 @@ func parseToSlice(a interface{}) []interface{} {
 //		"d": []string{"4"},
 //		"e": nil,
 //	  })
-func sqlTemplateSyntaxParse(text string) (operation, name, flag, opts string, err error) {
+func (m *sqlTemplate) sqlTemplateSyntaxParse(text string) (operation, name, flag, opts string, err error) {
 	// 去头去尾
 	temp := strings.TrimSpace(text)
 	// 空数据
@@ -429,117 +544,5 @@ func SqlTemplateParse(sql_template string, kvs ...interface{}) (sql_str string, 
 //
 // 值会直接写入sql语句中, 不支持sql注入检查
 func SqlTemplateRender(sql_template string, kvs ...interface{}) string {
-	data := makeMapOfkvs(kvs)
-	result := sqlTemplateRegexCrust.ReplaceAllStringFunc(sql_template, func(s string) string {
-		operation, name, flag, opts, err := sqlTemplateSyntaxParse(s[1 : len(s)-1])
-		if err != nil {
-			panic(err)
-		}
-		return sqlTranslate(operation, name, flag, opts, true, data)
-	})
-	result = sqlTemplateRegex.ReplaceAllStringFunc(result, func(s string) string {
-		operation, name, flag, opts, err := sqlTemplateSyntaxParse(s)
-		if err != nil {
-			panic(err)
-		}
-		return sqlTranslate(operation, name, flag, opts, false, data)
-	})
-	return repairSql(result)
-}
-
-func sqlTranslate(operation, name, flag string, opts string, crust bool, m map[string]interface{}) string {
-	// 选项检查
-	var attention_opt, must_opt bool
-	for _, o := range opts {
-		switch o {
-		case 'a':
-			attention_opt = true
-		case 'd':
-		case 'm':
-			must_opt = true
-		default:
-			panic(fmt.Sprintf(`syntax error, non-supported option "%s"`, string(o)))
-		}
-	}
-	if operation == "@" {
-		attention_opt = false
-	}
-
-	value, has := m[name]
-
-	// 无值返回空sql语句
-	if !has {
-		if must_opt {
-			panic(fmt.Sprintf(`"%s" must have a value`, name))
-		}
-		return ""
-	}
-
-	// 非注意模式, 零值返回空sql语句
-	if !attention_opt && IsZero(value) {
-		return ""
-	}
-
-	switch operation {
-	case "&":
-		operation = "and"
-	case "|":
-		operation = "or"
-	case "#":
-		// nil改为null
-		if value == nil {
-			return "null"
-		}
-		return anyToSqlString(value, true)
-	case "@":
-		return anyToSqlString(value, false)
-	default:
-		panic(fmt.Errorf(`syntax error, non-supported operation "%s"`, operation))
-	}
-
-	// nil 修改语句
-	if value == nil {
-		switch flag {
-		case "!=", "<>", "notin", "not_in", ">", "<":
-			return fmt.Sprintf(`%s %s is not null`, operation, name)
-		case "=", "like", "likestart", "like_start", "likeend", "like_end":
-			return fmt.Sprintf(`%s %s is null`, operation, name)
-		case "in", ">=", "<=":
-			return ""
-		}
-	}
-
-	var sql_str string
-	switch flag {
-	case ">", ">=", "<", "<=", "!=", "<>", "=":
-		sql_str = fmt.Sprintf(`%s %s %s %s`, operation, name, flag, anyToSqlString(value, true))
-	case "in":
-		values := parseToSlice(value)
-		if len(values) == 0 {
-			return ""
-		}
-		if len(values) == 1 {
-			return fmt.Sprintf(`%s %s = %s`, operation, name, anyToSqlString(values[0], true))
-		}
-		sql_str = fmt.Sprintf(`%s %s in %s`, operation, name, anyToSqlString(value, true))
-	case "notin", "not_in":
-		values := parseToSlice(value)
-		if len(values) == 0 {
-			return ""
-		}
-		if len(values) == 1 {
-			return fmt.Sprintf(`%s %s != %s`, operation, name, anyToSqlString(values[0], true))
-		}
-		sql_str = fmt.Sprintf(`%s %s not in %s`, operation, name, anyToSqlString(value, true))
-	case "like": // 包含xx
-		sql_str = fmt.Sprintf(`%s %s like "%%%s%%"`, operation, name, anyToSqlString(value, false))
-	case "likestart", "like_start": // 以xx开始
-		sql_str = fmt.Sprintf(`%s %s like "%s%%"`, operation, name, anyToSqlString(value, false))
-	case "likeend", "like_end": // 以xx结束
-		sql_str = fmt.Sprintf(`%s %s like "%%%s"`, operation, name, anyToSqlString(value, false))
-	default:
-		panic(fmt.Errorf(`syntax error, non-supported flag "%s"`, flag))
-	}
-
-	return sql_str
+	return newSqlTemplate(kvs...).Render(sql_template)
 }
