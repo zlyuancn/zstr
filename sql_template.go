@@ -242,7 +242,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 			return fmt.Sprintf(`%s %s like %s`, operation, name, m.addValue(name, value))
 		}
 		directWrite = func() string {
-			return fmt.Sprintf(`%s %s like "%%%s%%"`, operation, name, anyToSqlString(value, false))
+			return fmt.Sprintf(`%s %s like '%%%s%%'`, operation, name, anyToSqlString(value, false))
 		}
 	case "likestart", "like_start": // 以xx开始
 		makeSqlStr = func() string {
@@ -250,7 +250,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 			return fmt.Sprintf(`%s %s like %s`, operation, name, m.addValue(name, value))
 		}
 		directWrite = func() string {
-			return fmt.Sprintf(`%s %s like "%s%%"`, operation, name, anyToSqlString(value, false))
+			return fmt.Sprintf(`%s %s like '%s%%'`, operation, name, anyToSqlString(value, false))
 		}
 	case "likeend", "like_end": // 以xx结束
 		makeSqlStr = func() string {
@@ -258,7 +258,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 			return fmt.Sprintf(`%s %s like %s`, operation, name, m.addValue(name, value))
 		}
 		directWrite = func() string {
-			return fmt.Sprintf(`%s %s like "%%%s"`, operation, name, anyToSqlString(value, false))
+			return fmt.Sprintf(`%s %s like '%%%s'`, operation, name, anyToSqlString(value, false))
 		}
 	default:
 		panic(fmt.Errorf(`syntax error, non-supported flag "%s"`, flag))
@@ -374,11 +374,11 @@ func (m *sqlTemplate) sqlTranslate(operation, name, flag string, opts string, cr
 		}
 		sql_str = fmt.Sprintf(`%s %s not in %s`, operation, name, anyToSqlString(value, true))
 	case "like": // 包含xx
-		sql_str = fmt.Sprintf(`%s %s like "%%%s%%"`, operation, name, anyToSqlString(value, false))
+		sql_str = fmt.Sprintf(`%s %s like '%%%s%%'`, operation, name, anyToSqlString(value, false))
 	case "likestart", "like_start": // 以xx开始
-		sql_str = fmt.Sprintf(`%s %s like "%s%%"`, operation, name, anyToSqlString(value, false))
+		sql_str = fmt.Sprintf(`%s %s like '%s%%'`, operation, name, anyToSqlString(value, false))
 	case "likeend", "like_end": // 以xx结束
-		sql_str = fmt.Sprintf(`%s %s like "%%%s"`, operation, name, anyToSqlString(value, false))
+		sql_str = fmt.Sprintf(`%s %s like '%%%s'`, operation, name, anyToSqlString(value, false))
 	default:
 		panic(fmt.Errorf(`syntax error, non-supported flag "%s"`, flag))
 	}

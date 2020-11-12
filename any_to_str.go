@@ -76,12 +76,12 @@ func anyToSqlString(a interface{}, str_crust bool) string {
 
 	case string:
 		if str_crust {
-			return `"` + v + `"`
+			return `'` + v + `'`
 		}
 		return v
 	case []byte:
 		if str_crust {
-			return `"` + string(v) + `"`
+			return `'` + string(v) + `'`
 		}
 		return string(v)
 	case bool:
