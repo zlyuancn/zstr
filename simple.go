@@ -33,7 +33,7 @@ func ToBoolDefault(s string, def ...bool) bool {
 	return len(def) > 0 && def[0]
 }
 func GetBool(any interface{}, def ...bool) bool {
-	switch v:=any.(type) {
+	switch v := any.(type) {
 	case nil:
 		return false
 	case bool:
@@ -68,6 +68,8 @@ func GetInt(any interface{}, def ...int) int {
 			return 1
 		}
 		return 0
+	case int:
+		return v
 	}
 
 	s := anyToString(any)
@@ -104,6 +106,8 @@ func GetInt8(any interface{}, def ...int8) int8 {
 			return 1
 		}
 		return 0
+	case int8:
+		return v
 	}
 
 	s := anyToString(any)
@@ -140,6 +144,8 @@ func GetInt16(any interface{}, def ...int16) int16 {
 			return 1
 		}
 		return 0
+	case int16:
+		return v
 	}
 
 	s := anyToString(any)
@@ -176,6 +182,8 @@ func GetInt32(any interface{}, def ...int32) int32 {
 			return 1
 		}
 		return 0
+	case int32:
+		return v
 	}
 
 	s := anyToString(any)
@@ -208,6 +216,8 @@ func GetInt64(any interface{}, def ...int64) int64 {
 			return 1
 		}
 		return 0
+	case int64:
+		return v
 	}
 
 	s := anyToString(any)
@@ -245,6 +255,8 @@ func GetUint(any interface{}, def ...uint) uint {
 			return 1
 		}
 		return 0
+	case uint:
+		return v
 	}
 
 	s := anyToString(any)
@@ -281,6 +293,8 @@ func GetUint8(any interface{}, def ...uint8) uint8 {
 			return 1
 		}
 		return 0
+	case uint8:
+		return v
 	}
 
 	s := anyToString(any)
@@ -317,6 +331,8 @@ func GetUint16(any interface{}, def ...uint16) uint16 {
 			return 1
 		}
 		return 0
+	case uint16:
+		return v
 	}
 
 	s := anyToString(any)
@@ -353,6 +369,8 @@ func GetUint32(any interface{}, def ...uint32) uint32 {
 			return 1
 		}
 		return 0
+	case uint32:
+		return v
 	}
 
 	s := anyToString(any)
@@ -385,6 +403,8 @@ func GetUint64(any interface{}, def ...uint64) uint64 {
 			return 1
 		}
 		return 0
+	case uint64:
+		return v
 	}
 
 	s := anyToString(any)
@@ -422,6 +442,10 @@ func GetFloat32(any interface{}, def ...float32) float32 {
 			return 1
 		}
 		return 0
+	case float32:
+		return v
+	case float64:
+		return float32(v)
 	}
 
 	s := anyToString(any)
@@ -454,6 +478,10 @@ func GetFloat64(any interface{}, def ...float64) float64 {
 			return 1
 		}
 		return 0
+	case float32:
+		return float64(v)
+	case float64:
+		return v
 	}
 
 	s := anyToString(any)
