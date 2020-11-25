@@ -12,20 +12,14 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
 const defaultSqlCompareFlag = "="
 
 var (
-	// 标准
-	sqlTemplateRegex = regexp.MustCompile(`[&|#@]\w*\.?\w+`)
-	// 加壳
-	sqlTemplateRegexCrust = regexp.MustCompile(`\{[\s\S]*?\}`)
-
-	// id
-	sqlTemplateParseIdRegex = regexp.MustCompile(`\{\{\d+\}\}`)
+	// sql模板正则
+	sqlTemplateRegex = regexp.MustCompile(`(\{[\s\S]*?\})|([&|#@]\w*\.?\w+)`)
 
 	// 空字符串
 	emptyStrRegex = regexp.MustCompile(`\s+`)
@@ -67,7 +61,6 @@ var (
 
 type sqlTemplate struct {
 	data   map[string]interface{}
-	index  uint64
 	names  []string
 	values []interface{}
 }
@@ -78,44 +71,27 @@ func newSqlTemplate(kvs ...interface{}) *sqlTemplate {
 	}
 }
 
-func (m *sqlTemplate) addValue(name string, value interface{}) (flag string) {
-	flag = "{{" + strconv.FormatUint(m.index, 10) + "}}"
+func (m *sqlTemplate) addValue(name string, value interface{}) {
 	m.names = append(m.names, name)
 	m.values = append(m.values, value)
-	m.index++
-	return
 }
 
 func (m *sqlTemplate) Parse(sql_template string) (sql_str string, names []string, args []interface{}) {
-	sql_str = sqlTemplateRegexCrust.ReplaceAllStringFunc(sql_template, func(s string) string {
-		operation, name, flag, opts, err := m.sqlTemplateSyntaxParse(s[1 : len(s)-1])
-		if err != nil {
-			panic(err)
+	sql_str = sqlTemplateRegex.ReplaceAllStringFunc(sql_template, func(s string) string {
+		if s[0] == '{' {
+			s = s[1 : len(s)-1]
 		}
-		return m.translate(operation, name, flag, opts, true)
-	})
 
-	sql_str = sqlTemplateRegex.ReplaceAllStringFunc(sql_str, func(s string) string {
 		operation, name, flag, opts, err := m.sqlTemplateSyntaxParse(s)
 		if err != nil {
 			panic(err)
 		}
-		return m.translate(operation, name, flag, opts, false)
+		return m.translate(operation, name, flag, opts)
 	})
-
-	// 按顺序写入names和args
-	sql_str = sqlTemplateParseIdRegex.ReplaceAllStringFunc(sql_str, func(s string) string {
-		index, _ := strconv.Atoi(s[2 : len(s)-2])
-		names = append(names, m.names[index])
-		args = append(args, m.values[index])
-		return "?"
-	})
-
-	sql_str = repairSql(sql_str)
-	return sql_str, names, args
+	return repairSql(sql_str), m.names, m.values
 }
 
-func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust bool) string {
+func (m *sqlTemplate) translate(operation, name, flag string, opts string) string {
 	// 选项检查
 	var attention_opt, direct_opt, must_opt bool
 	for _, o := range opts {
@@ -164,7 +140,8 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 		if direct_opt {
 			return anyToSqlString(value, true)
 		}
-		return m.addValue(name, value)
+		m.addValue(name, value)
+		return "?"
 	case "@": // !attention_opt + direct
 		return anyToSqlString(value, false)
 	default:
@@ -189,7 +166,8 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 	switch flag {
 	case ">", ">=", "<", "<=", "!=", "<>", "=":
 		makeSqlStr = func() string {
-			return fmt.Sprintf(`%s %s %s %s`, operation, name, flag, m.addValue(name, value))
+			m.addValue(name, value)
+			return fmt.Sprintf(`%s %s %s ?`, operation, name, flag)
 		}
 		directWrite = func() string {
 			return fmt.Sprintf(`%s %s %s %s`, operation, name, flag, anyToSqlString(value, true))
@@ -201,11 +179,13 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 		}
 		makeSqlStr = func() string {
 			if len(values) == 1 {
-				return fmt.Sprintf(`%s %s = %s`, operation, name, m.addValue(name, values[0]))
+				m.addValue(name, values[0])
+				return fmt.Sprintf(`%s %s = ?`, operation, name)
 			}
-			var fs []string
+			fs := make([]string, len(values))
 			for i, s := range values {
-				fs = append(fs, m.addValue(fmt.Sprintf("%s.in(%d)", name, i), s))
+				m.addValue(fmt.Sprintf("%s.in(%d)", name, i), s)
+				fs[i] = "?"
 			}
 			return fmt.Sprintf(`%s %s in (%s)`, operation, name, strings.Join(fs, ","))
 		}
@@ -222,11 +202,13 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 		}
 		makeSqlStr = func() string {
 			if len(values) == 1 {
-				return fmt.Sprintf(`%s %s != %s`, operation, name, m.addValue(name, values[0]))
+				m.addValue(name, values[0])
+				return fmt.Sprintf(`%s %s != ?`, operation, name)
 			}
-			var fs []string
+			fs := make([]string, len(values))
 			for i, s := range values {
-				fs = append(fs, m.addValue(fmt.Sprintf("%s.not_in(%d)", name, i), s))
+				m.addValue(fmt.Sprintf("%s.not_in(%d)", name, i), s)
+				fs[i] = "?"
 			}
 			return fmt.Sprintf(`%s %s not in (%s)`, operation, name, strings.Join(fs, ","))
 		}
@@ -238,24 +220,24 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 		}
 	case "like": // 包含xx
 		makeSqlStr = func() string {
-			value = "%" + anyToSqlString(value, false) + "%"
-			return fmt.Sprintf(`%s %s like %s`, operation, name, m.addValue(name, value))
+			m.addValue(name, "%"+anyToSqlString(value, false)+"%")
+			return fmt.Sprintf(`%s %s like ?`, operation, name)
 		}
 		directWrite = func() string {
 			return fmt.Sprintf(`%s %s like '%%%s%%'`, operation, name, anyToSqlString(value, false))
 		}
 	case "likestart", "like_start": // 以xx开始
 		makeSqlStr = func() string {
-			value = anyToSqlString(value, false) + "%"
-			return fmt.Sprintf(`%s %s like %s`, operation, name, m.addValue(name, value))
+			m.addValue(name, anyToSqlString(value, false)+"%")
+			return fmt.Sprintf(`%s %s like ?`, operation, name)
 		}
 		directWrite = func() string {
 			return fmt.Sprintf(`%s %s like '%s%%'`, operation, name, anyToSqlString(value, false))
 		}
 	case "likeend", "like_end": // 以xx结束
 		makeSqlStr = func() string {
-			value = "%" + anyToSqlString(value, false)
-			return fmt.Sprintf(`%s %s like %s`, operation, name, m.addValue(name, value))
+			m.addValue(name, "%"+anyToSqlString(value, false))
+			return fmt.Sprintf(`%s %s like ?`, operation, name)
 		}
 		directWrite = func() string {
 			return fmt.Sprintf(`%s %s like '%%%s'`, operation, name, anyToSqlString(value, false))
@@ -272,24 +254,21 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string, crust
 }
 
 func (m *sqlTemplate) Render(sql_template string) string {
-	result := sqlTemplateRegexCrust.ReplaceAllStringFunc(sql_template, func(s string) string {
-		operation, name, flag, opts, err := m.sqlTemplateSyntaxParse(s[1 : len(s)-1])
-		if err != nil {
-			panic(err)
+	result := sqlTemplateRegex.ReplaceAllStringFunc(sql_template, func(s string) string {
+		if s[0] == '{' {
+			s = s[1 : len(s)-1]
 		}
-		return m.sqlTranslate(operation, name, flag, opts, true)
-	})
-	result = sqlTemplateRegex.ReplaceAllStringFunc(result, func(s string) string {
+
 		operation, name, flag, opts, err := m.sqlTemplateSyntaxParse(s)
 		if err != nil {
 			panic(err)
 		}
-		return m.sqlTranslate(operation, name, flag, opts, false)
+		return m.sqlTranslate(operation, name, flag, opts)
 	})
 	return repairSql(result)
 }
 
-func (m *sqlTemplate) sqlTranslate(operation, name, flag string, opts string, crust bool) string {
+func (m *sqlTemplate) sqlTranslate(operation, name, flag string, opts string) string {
 	// 选项检查
 	var attention_opt, must_opt bool
 	for _, o := range opts {
