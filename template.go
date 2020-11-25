@@ -10,6 +10,7 @@ package zstr
 
 import (
 	"regexp"
+	"strconv"
 )
 
 var templateRegex = regexp.MustCompile(`(\{@\w*\.?\w+\})|(@\w*\.?\w+)`)
@@ -21,8 +22,10 @@ var templateRegex = regexp.MustCompile(`(\{@\w*\.?\w+\})|(@\w*\.?\w+)`)
 //    s:=TemplateRender("s@a e", "a", "v")
 //    s:=TemplateRender("s{@a}e", "a", "v")
 //    s:=TemplateRender("s{@a}e", map[string]string{"a": "v"})
+//    s:=TemplateRender("s@a @a e", "a", "v", "a[1]", "xxx")
 func TemplateRender(format string, kvs ...interface{}) string {
 	data := makeMapOfkvs(kvs)
+	c := newCounter()
 	// 替换 {@field} 和 @field, 如果没有设置则不替换
 	result := templateRegex.ReplaceAllStringFunc(format, func(s string) string {
 		var key string
@@ -32,7 +35,10 @@ func TemplateRender(format string, kvs ...interface{}) string {
 			key = s[1:]
 		}
 
-		v, ok := data[key]
+		v, ok := data[key+"["+strconv.Itoa(c.Incr(key)-1)+"]"]
+		if !ok {
+			v, ok = data[key]
+		}
 		if ok {
 			return anyToString(v)
 		}
