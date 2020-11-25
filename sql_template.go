@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -60,14 +61,16 @@ var (
 )
 
 type sqlTemplate struct {
-	data   map[string]interface{}
-	names  []string
-	values []interface{}
+	data    map[string]interface{}
+	names   []string
+	values  []interface{}
+	counter counter
 }
 
 func newSqlTemplate(kvs ...interface{}) *sqlTemplate {
 	return &sqlTemplate{
-		data: makeMapOfkvs(kvs),
+		data:    makeMapOfkvs(kvs),
+		counter: newCounter(),
 	}
 }
 
@@ -111,7 +114,12 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 		direct_opt = true
 	}
 
-	value, has := m.data[name]
+	suffix := "["+strconv.Itoa(m.counter.Incr(name)-1)+"]"
+	value, has := m.data[name+suffix]
+	if !has {
+		suffix = ""
+		value, has = m.data[name]
+	}
 
 	// 无值返回空sql语句
 	if !has {
@@ -140,7 +148,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 		if direct_opt {
 			return anyToSqlString(value, true)
 		}
-		m.addValue(name, value)
+		m.addValue(name+suffix, value)
 		return "?"
 	case "@": // !attention_opt + direct
 		return anyToSqlString(value, false)
@@ -166,7 +174,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 	switch flag {
 	case ">", ">=", "<", "<=", "!=", "<>", "=":
 		makeSqlStr = func() string {
-			m.addValue(name, value)
+			m.addValue(name+suffix, value)
 			return fmt.Sprintf(`%s %s %s ?`, operation, name, flag)
 		}
 		directWrite = func() string {
@@ -179,12 +187,12 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 		}
 		makeSqlStr = func() string {
 			if len(values) == 1 {
-				m.addValue(name, values[0])
+				m.addValue(name+suffix, values[0])
 				return fmt.Sprintf(`%s %s = ?`, operation, name)
 			}
 			fs := make([]string, len(values))
 			for i, s := range values {
-				m.addValue(fmt.Sprintf("%s.in(%d)", name, i), s)
+				m.addValue(fmt.Sprintf("%s.in(%d)", name+suffix, i), s)
 				fs[i] = "?"
 			}
 			return fmt.Sprintf(`%s %s in (%s)`, operation, name, strings.Join(fs, ","))
@@ -202,12 +210,12 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 		}
 		makeSqlStr = func() string {
 			if len(values) == 1 {
-				m.addValue(name, values[0])
+				m.addValue(name+suffix, values[0])
 				return fmt.Sprintf(`%s %s != ?`, operation, name)
 			}
 			fs := make([]string, len(values))
 			for i, s := range values {
-				m.addValue(fmt.Sprintf("%s.not_in(%d)", name, i), s)
+				m.addValue(fmt.Sprintf("%s.not_in(%d)", name+suffix, i), s)
 				fs[i] = "?"
 			}
 			return fmt.Sprintf(`%s %s not in (%s)`, operation, name, strings.Join(fs, ","))
@@ -220,7 +228,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 		}
 	case "like": // 包含xx
 		makeSqlStr = func() string {
-			m.addValue(name, "%"+anyToSqlString(value, false)+"%")
+			m.addValue(name+suffix, "%"+anyToSqlString(value, false)+"%")
 			return fmt.Sprintf(`%s %s like ?`, operation, name)
 		}
 		directWrite = func() string {
@@ -228,7 +236,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 		}
 	case "likestart", "like_start": // 以xx开始
 		makeSqlStr = func() string {
-			m.addValue(name, anyToSqlString(value, false)+"%")
+			m.addValue(name+suffix, anyToSqlString(value, false)+"%")
 			return fmt.Sprintf(`%s %s like ?`, operation, name)
 		}
 		directWrite = func() string {
@@ -236,7 +244,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 		}
 	case "likeend", "like_end": // 以xx结束
 		makeSqlStr = func() string {
-			m.addValue(name, "%"+anyToSqlString(value, false))
+			m.addValue(name+suffix, "%"+anyToSqlString(value, false))
 			return fmt.Sprintf(`%s %s like ?`, operation, name)
 		}
 		directWrite = func() string {
@@ -286,7 +294,10 @@ func (m *sqlTemplate) sqlTranslate(operation, name, flag string, opts string) st
 		attention_opt = false
 	}
 
-	value, has := m.data[name]
+	value, has := m.data[name+"["+strconv.Itoa(m.counter.Incr(name)-1)+"]"]
+	if !has {
+		value, has = m.data[name]
+	}
 
 	// 无值返回空sql语句
 	if !has {
