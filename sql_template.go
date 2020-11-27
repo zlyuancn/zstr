@@ -9,9 +9,9 @@
 package zstr
 
 import (
+	"bytes"
 	"fmt"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 )
@@ -19,20 +19,12 @@ import (
 const defaultSqlCompareFlag = "="
 
 var (
-	// sql模板正则
-	sqlTemplateRegex = regexp.MustCompile(`(\{[\s\S]*?\})|([&|#@]\w*\.?\w+)`)
-
-	// 空字符串
-	emptyStrRegex = regexp.MustCompile(`\s+`)
-
-	// 变量名
-	variableNameRegex = regexp.MustCompile(`^\w*\.?\w+$`)
 	// 操作符
-	sqlTemplateOperationMapp = map[string]struct{}{
-		"&": {},
-		"|": {},
-		"#": {},
-		"@": {},
+	sqlTemplateOperationMapp = map[int32]struct{}{
+		'&': {},
+		'|': {},
+		'#': {},
+		'@': {},
 	}
 	// 标记
 	sqlTemplateFlagMapp = map[string]struct{}{
@@ -74,14 +66,77 @@ func newSqlTemplate(kvs ...interface{}) *sqlTemplate {
 	}
 }
 
+func (m *sqlTemplate) calculateTemplate(ss []rune, start int) (int, int, bool, bool) {
+	var crust, has, ok bool
+	// 查找开头
+	for i := start; i < len(ss); i++ {
+		if ss[i] == '{' {
+			start, crust, has = i, true, true
+			break
+		}
+		if _, ok = sqlTemplateOperationMapp[ss[i]]; ok {
+			start, crust, has = i, false, true
+			break
+		}
+	}
+	if !has {
+		return 0, 0, false, false
+	}
+
+	// 预检
+	if crust && (len(ss)-start < 4) || (len(ss)-start < 2) {
+		return 0, 0, false, false
+	}
+
+	if !crust {
+		for i := start + 1; i < len(ss); i++ {
+			_, ok = templateVariableNameMap[ss[i]]
+			if !ok {
+				if i-start < 2 {
+					return m.calculateTemplate(ss, i)
+				}
+				return start, i, false, true
+			}
+		}
+		return start, len(ss), false, len(ss)-start >= 2
+	}
+
+	if crust {
+		for i := start + 1; i < len(ss); i++ {
+			if ss[i] != '}' {
+				continue
+			}
+			return start, i + 1, true, true
+		}
+	}
+	return 0, 0, false, false
+}
+
+func (m *sqlTemplate) replaceAllFunc(s string, fn func(s string, crust bool) string) string {
+	ss := []rune(s)
+	var buff bytes.Buffer
+	for offset := 0; offset < len(ss); {
+		start, end, crust, has := m.calculateTemplate(ss, offset)
+		if !has {
+			buff.WriteString(string(ss[offset:]))
+			break
+		}
+
+		buff.WriteString(string(ss[offset:start]))
+		buff.WriteString(fn(string(ss[start:end]), crust))
+		offset = end
+	}
+	return buff.String()
+}
+
 func (m *sqlTemplate) addValue(name string, value interface{}) {
 	m.names = append(m.names, name)
 	m.values = append(m.values, value)
 }
 
 func (m *sqlTemplate) Parse(sql_template string) (sql_str string, names []string, args []interface{}) {
-	sql_str = sqlTemplateRegex.ReplaceAllStringFunc(sql_template, func(s string) string {
-		if s[0] == '{' {
+	sql_str = m.replaceAllFunc(sql_template, func(s string, crust bool) string {
+		if crust {
 			s = s[1 : len(s)-1]
 		}
 
@@ -91,7 +146,7 @@ func (m *sqlTemplate) Parse(sql_template string) (sql_str string, names []string
 		}
 		return m.translate(operation, name, flag, opts)
 	})
-	return repairSql(sql_str), m.names, m.values
+	return m.repairSql(sql_str), m.names, m.values
 }
 
 func (m *sqlTemplate) translate(operation, name, flag string, opts string) string {
@@ -114,7 +169,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 		direct_opt = true
 	}
 
-	suffix := "["+strconv.Itoa(m.counter.Incr(name)-1)+"]"
+	suffix := "[" + strconv.Itoa(m.counter.Incr(name)-1) + "]"
 	value, has := m.data[name+suffix]
 	if !has {
 		suffix = ""
@@ -262,8 +317,8 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 }
 
 func (m *sqlTemplate) Render(sql_template string) string {
-	result := sqlTemplateRegex.ReplaceAllStringFunc(sql_template, func(s string) string {
-		if s[0] == '{' {
+	result := m.replaceAllFunc(sql_template, func(s string, crust bool) string {
+		if crust {
 			s = s[1 : len(s)-1]
 		}
 
@@ -273,7 +328,7 @@ func (m *sqlTemplate) Render(sql_template string) string {
 		}
 		return m.sqlTranslate(operation, name, flag, opts)
 	})
-	return repairSql(result)
+	return m.repairSql(result)
 }
 
 func (m *sqlTemplate) sqlTranslate(operation, name, flag string, opts string) string {
@@ -462,7 +517,7 @@ func (m *sqlTemplate) sqlTemplateSyntaxParse(text string) (operation, name, flag
 	operation, temp = temp[:1], temp[1:]
 
 	// 缩进空格
-	temp = emptyStrRegex.ReplaceAllString(temp, " ")
+	temp = m.retractAllSpace(temp)
 
 	// 分离数据
 	texts := strings.SplitN(temp, " ", 4) // 4为考虑尾部可能有空格
@@ -483,7 +538,7 @@ func (m *sqlTemplate) sqlTemplateSyntaxParse(text string) (operation, name, flag
 	}
 
 	// 检查操作符
-	if _, ok := sqlTemplateOperationMapp[operation]; !ok {
+	if _, ok := sqlTemplateOperationMapp[int32(operation[0])]; !ok {
 		err = fmt.Errorf(`syntax error, {%s}, non-supported operation "%s"`, text, operation)
 		return
 	}
@@ -493,9 +548,16 @@ func (m *sqlTemplate) sqlTemplateSyntaxParse(text string) (operation, name, flag
 		err = fmt.Errorf("syntax error, {%s}, no variable name", text)
 		return
 	}
-	if !variableNameRegex.MatchString(name) {
+
+	if name[0] == '.' || name[len(name)-1] == '.' {
 		err = fmt.Errorf("syntax error, {%s}, Invalid variable name", text)
 		return
+	}
+	for _, v := range []rune(name) {
+		if _, ok := templateVariableNameMap[v]; !ok {
+			err = fmt.Errorf("syntax error, {%s}, Invalid variable name", text)
+			return
+		}
 	}
 
 	// 检查标记
