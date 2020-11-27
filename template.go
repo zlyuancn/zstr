@@ -9,11 +9,9 @@
 package zstr
 
 import (
-	"regexp"
+	"bytes"
 	"strconv"
 )
-
-var templateRegex = regexp.MustCompile(`(\{@\w*\.?\w+\})|(@\w*\.?\w+)`)
 
 type simpleTemplate struct {
 	data    map[string]interface{}
@@ -27,14 +25,103 @@ func newSimpleTemplate(kvs ...interface{}) *simpleTemplate {
 	}
 }
 
+var templateVariableNameMap = func() map[int32]struct{} {
+	mm := map[int32]struct{}{
+		'_': {}, '.': {},
+	}
+	for i := '0'; i < '9'+1; i++ {
+		mm[i] = struct{}{}
+	}
+	for i := 'a'; i < 'z'+1; i++ {
+		mm[i] = struct{}{}
+	}
+	for i := 'A'; i < 'Z'+1; i++ {
+		mm[i] = struct{}{}
+	}
+	return mm
+}()
+
+func (m *simpleTemplate) calculateTemplate(ss []rune, start int) (int, int, bool, bool) {
+	var crust, has bool
+F1:
+	// 查找开头
+	for i := start; i < len(ss); i++ {
+		switch ss[i] {
+		case '{':
+			start, crust, has = i, true, true
+			break F1
+		case '@':
+			start, crust, has = i, false, true
+			break F1
+		}
+	}
+	if !has {
+		return 0, 0, false, false
+	}
+
+	// 预检
+	if crust && (len(ss)-start < 4) || (len(ss)-start < 2) {
+		return 0, 0, false, false
+	}
+
+	var ok bool
+	if !crust {
+		for i := start + 1; i < len(ss); i++ {
+			_, ok = templateVariableNameMap[ss[i]]
+			if !ok {
+				if i-start < 2 || ss[start+1] == '.' || ss[i-1] == '.' {
+					return m.calculateTemplate(ss, i)
+				}
+				return start, i, false, true
+			}
+		}
+		return start, len(ss), false, len(ss)-start >= 2 && ss[start+1] != '.' && ss[len(ss)-1] != '.'
+	}
+
+	if crust {
+		if ss[start+1] != '@' {
+			has = false
+		}
+		for i := start + 2; i < len(ss); i++ {
+			if ss[i] != '}' {
+				_, ok = templateVariableNameMap[ss[i]]
+				if !ok {
+					has = false
+				}
+				continue
+			}
+			if i-start < 3 || !has || ss[start+2] == '.' || ss[i-1] == '.' {
+				return m.calculateTemplate(ss, i+1)
+			}
+			return start, i + 1, true, true
+		}
+	}
+	return 0, 0, false, false
+}
+
+func (m *simpleTemplate) replaceAllFunc(s string, fn func(s string, crust bool) string) string {
+	ss := []rune(s)
+	var buff bytes.Buffer
+	for offset := 0; offset < len(ss); {
+		start, end, crust, has := m.calculateTemplate(ss, offset)
+		if !has {
+			buff.WriteString(string(ss[offset:]))
+			break
+		}
+
+		buff.WriteString(string(ss[offset:start]))
+		buff.WriteString(fn(string(ss[start:end]), crust))
+		offset = end
+	}
+	return buff.String()
+}
+
 func (m *simpleTemplate) Render(format string) string {
 	// 替换 {@field} 和 @field, 如果没有设置则不替换
-	result := templateRegex.ReplaceAllStringFunc(format, func(s string) string {
+	result := m.replaceAllFunc(format, func(s string, crust bool) string {
 		var key string
-		var crust bool
-		if s[0] == '{' {
+		if crust {
 			key = s[2 : len(s)-1]
-			crust = true
 		} else {
 			key = s[1:]
 		}
