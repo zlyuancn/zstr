@@ -149,6 +149,11 @@ func (m *simpleTemplate) Render(format string) string {
 //    s:=TemplateRender("s{@a}e", "a", "v")
 //    s:=TemplateRender("s{@a}e", map[string]string{"a": "v"})
 //    s:=TemplateRender("s@a @a e", "a", "v", "a[1]", "xxx")
+//
+// 注意:
+//     如果name存在花括号外壳{}且没有传参, 则替换为空字符串
+//     我们不会去检查name是否完全符合变量名标志, 因为这是无意义且消耗资源的
+//         变量名首位可以为数字, 变量中间可以连续出现多个小数点, 如 0..a 是合法的
 func TemplateRender(format string, kvs ...interface{}) string {
 	return newSimpleTemplate(kvs...).Render(format)
 }

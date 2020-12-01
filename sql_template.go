@@ -492,9 +492,10 @@ func (m *sqlTemplate) parseToSlice(a interface{}) []interface{} {
 // 输入的kvs必须为：map[string]string, map[string]interface{}, 或健值对
 //
 // 注意:
-//     如果name没有传参或为该类型的零值, 则替换为空字符串
-//     如果name的值为nil, 则结果为: (操作符) (name) is null
-//     如果name的值是一个切片, 结果会用逗号连接起来且外面会加上小括号. 如 []string{"a", "b"} 会转为 ("a", "b")
+//     一般情况下如果name没有传参或为该类型的零值, 则替换为空字符串
+//     如果name的值为nil, 不同的标志会转为不同的语句
+//     我们不会去检查name是否完全符合变量名标志, 因为这是无意义且消耗资源的
+//         变量名首位可以为数字, 变量中间可以连续出现多个小数点, 如 0..a 是合法的
 //
 // 示例:
 //    s := SqlTemplateRender("select * from t where &a {&b} {&c !=} {&d in} {|e} limit 1", map[string]interface{}{
