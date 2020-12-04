@@ -13,7 +13,7 @@ import (
 )
 
 func TestString_Bool(t *testing.T) {
-	s := New("1")
+	s := String("1")
 	b, err := s.Bool()
 	if err != nil {
 		t.Fatal(err)
@@ -22,7 +22,7 @@ func TestString_Bool(t *testing.T) {
 }
 
 func TestString_Scan(t *testing.T) {
-	s := New("1")
+	s := String("yes")
 	b := false
 	if err := s.Scan(&b); err != nil {
 		t.Fatal(err)
