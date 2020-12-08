@@ -14,14 +14,15 @@ import (
 )
 
 type simpleTemplate struct {
-	data    map[string]interface{}
-	counter *counter
+	data       map[string]interface{}
+	keyCounter *counter // key计数器
+	sub        int      // 下标计数器
 }
 
 func newSimpleTemplate(kvs ...interface{}) *simpleTemplate {
 	return &simpleTemplate{
-		data:    makeMapOfkvs(kvs),
-		counter: newCounter(-1),
+		data:       makeMapOfkvs(kvs),
+		keyCounter: newCounter(-1),
 	}
 }
 
@@ -126,10 +127,14 @@ func (m *simpleTemplate) Render(format string) string {
 			key = s[1:]
 		}
 
-		v, ok := m.data[key+"["+strconv.Itoa(m.counter.Incr(key))+"]"]
+		v, ok := m.data[key+"["+strconv.Itoa(m.keyCounter.Incr(key))+"]"]
 		if !ok {
 			v, ok = m.data[key]
 		}
+		if !ok {
+			v, ok = m.data["*["+strconv.Itoa(m.sub)+"]"]
+		}
+		m.sub++ // 每次一定+1
 		if ok {
 			return anyToString(v)
 		}
@@ -143,12 +148,16 @@ func (m *simpleTemplate) Render(format string) string {
 
 // 模板渲染
 //
-// 输入的kvs必须为：map[string]string，map[string]interface{}，或健值对
+// 输入的kvs必须为：map[string]string，map[string]interface{}，或按顺序传入值
 // 示例:
-//    s:=TemplateRender("s@a e", "a", "v")
-//    s:=TemplateRender("s{@a}e", "a", "v")
-//    s:=TemplateRender("s{@a}e", map[string]string{"a": "v"})
-//    s:=TemplateRender("s@a @a e", "a", "v", "a[1]", "xxx")
+//    s:=Render("s@a e", map[string]string{"a": "va"})
+//    s:=Render("s{@a}e", map[string]string{"a": "va"})
+//    s:=Render("s{@a}e", "va")
+//    s:=Render("s@a @a e", "va0", "va1")
+//
+// 寻值优先级:
+//    匹配名下标 > 匹配名 > *下标
+//    如:  a[0] > a > *[0]
 //
 // 注意:
 //     如果name存在花括号外壳{}且没有传参, 则替换为空字符串
