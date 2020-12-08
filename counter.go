@@ -39,5 +39,9 @@ func (c *counter) IncrBy(key string, num int) int {
 }
 
 func (c *counter) Get(key string) int {
-	return c.data[key]
+	v, ok := c.data[key]
+	if ok {
+		return v
+	}
+	return c.def
 }
