@@ -14,19 +14,19 @@ import (
 
 // 构建map, 支持 map[string]string，map[string]interface{}
 // 其它值按顺序转为 map[string]interface{}{"*[0]": 值0, "*[1]", 值1...}
-func MakeMapOfKvs(a ...interface{}) map[string]interface{} {
-	return makeMapOfkvs(a)
+func MakeMapOfValues(values ...interface{}) map[string]interface{} {
+	return makeMapOfValues(values)
 }
 
 // 构建map, 支持 map[string]string，map[string]interface{}
 // 其它值按顺序转为 map[string]interface{}{"*[0]": 值0, "*[1]", 值1...}
-func makeMapOfkvs(a []interface{}) map[string]interface{} {
+func makeMapOfValues(values []interface{}) map[string]interface{} {
 	var data = make(map[string]interface{})
-	if len(a) == 0 {
+	if len(values) == 0 {
 		return data
 	}
 
-	switch p := a[0].(type) {
+	switch p := values[0].(type) {
 	case map[string]string:
 		for k, v := range p {
 			data[k] = v
@@ -39,7 +39,7 @@ func makeMapOfkvs(a []interface{}) map[string]interface{} {
 		return data
 	}
 
-	for i, v := range a {
+	for i, v := range values {
 		data[`*[`+strconv.Itoa(i)+`]`] = v
 	}
 	return data

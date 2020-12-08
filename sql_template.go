@@ -60,9 +60,9 @@ type sqlTemplate struct {
 	sub        int      // 下标计数器
 }
 
-func newSqlTemplate(kvs ...interface{}) *sqlTemplate {
+func newSqlTemplate(values ...interface{}) *sqlTemplate {
 	return &sqlTemplate{
-		data:       makeMapOfkvs(kvs),
+		data:       makeMapOfValues(values),
 		keyCounter: newCounter(-1),
 	}
 }
@@ -499,7 +499,7 @@ func (m *sqlTemplate) parseToSlice(a interface{}) []interface{} {
 //     d:   direct, 直接将值写入sql语句中
 //     m:   must, 必须传值, 值可以为零值
 //
-// 输入的kvs必须为：map[string]string, map[string]interface{}，或按顺序传入值
+// 输入的values必须为：map[string]string, map[string]interface{}，或按顺序传入值
 //
 // 寻值优先级:
 //    匹配名下标 > 匹配名 > *下标
@@ -603,23 +603,23 @@ func (m *sqlTemplate) sqlTemplateSyntaxParse(text string) (operation, name, flag
 }
 
 // sql模板解析
-func SqlTemplateParse(sql_template string, kvs ...interface{}) (sql_str string, names []string, args []interface{}) {
-	return newSqlTemplate(kvs...).Parse(sql_template)
+func SqlTemplateParse(sql_template string, values ...interface{}) (sql_str string, names []string, args []interface{}) {
+	return newSqlTemplate(values...).Parse(sql_template)
 }
 
 // sql模板解析, 和SqlTemplateParse一样, 只是简短了函数名
-func SqlParse(sql_template string, kvs ...interface{}) (sql_str string, names []string, args []interface{}) {
-	return newSqlTemplate(kvs...).Parse(sql_template)
+func SqlParse(sql_template string, values ...interface{}) (sql_str string, names []string, args []interface{}) {
+	return newSqlTemplate(values...).Parse(sql_template)
 }
 
 // sql模板渲染
 //
 // 值会直接写入sql语句中, 不支持sql注入检查
-func SqlTemplateRender(sql_template string, kvs ...interface{}) string {
-	return newSqlTemplate(kvs...).Render(sql_template)
+func SqlTemplateRender(sql_template string, values ...interface{}) string {
+	return newSqlTemplate(values...).Render(sql_template)
 }
 
 // sql模板渲染, 和SqlTemplateRender一样, 只是简短了函数名
-func SqlRender(sql_template string, kvs ...interface{}) string {
-	return newSqlTemplate(kvs...).Render(sql_template)
+func SqlRender(sql_template string, values ...interface{}) string {
+	return newSqlTemplate(values...).Render(sql_template)
 }

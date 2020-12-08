@@ -19,9 +19,9 @@ type simpleTemplate struct {
 	sub        int      // 下标计数器
 }
 
-func newSimpleTemplate(kvs ...interface{}) *simpleTemplate {
+func newSimpleTemplate(values ...interface{}) *simpleTemplate {
 	return &simpleTemplate{
-		data:       makeMapOfkvs(kvs),
+		data:       makeMapOfValues(values),
 		keyCounter: newCounter(-1),
 	}
 }
@@ -148,7 +148,7 @@ func (m *simpleTemplate) Render(format string) string {
 
 // 模板渲染
 //
-// 输入的kvs必须为：map[string]string，map[string]interface{}，或按顺序传入值
+// 输入的values必须为：map[string]string，map[string]interface{}，或按顺序传入值
 // 示例:
 //    s:=Render("s@a e", map[string]string{"a": "va"})
 //    s:=Render("s{@a}e", map[string]string{"a": "va"})
@@ -163,11 +163,11 @@ func (m *simpleTemplate) Render(format string) string {
 //     如果name存在花括号外壳{}且没有传参, 则替换为空字符串
 //     我们不会去检查name是否完全符合变量名标志, 因为这是无意义且消耗资源的
 //         变量名首位可以为数字, 变量中间可以连续出现多个小数点, 如 0..a 是合法的
-func TemplateRender(format string, kvs ...interface{}) string {
-	return newSimpleTemplate(kvs...).Render(format)
+func TemplateRender(format string, values ...interface{}) string {
+	return newSimpleTemplate(values...).Render(format)
 }
 
 // 模板渲染, 和TemplateRender一样, 只是简短了函数名
-func Render(format string, kvs ...interface{}) string {
-	return newSimpleTemplate(kvs...).Render(format)
+func Render(format string, values ...interface{}) string {
+	return newSimpleTemplate(values...).Render(format)
 }
