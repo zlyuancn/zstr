@@ -56,13 +56,13 @@ type sqlTemplate struct {
 	data    map[string]interface{}
 	names   []string
 	values  []interface{}
-	counter counter
+	counter *counter
 }
 
 func newSqlTemplate(kvs ...interface{}) *sqlTemplate {
 	return &sqlTemplate{
 		data:    makeMapOfkvs(kvs),
-		counter: newCounter(),
+		counter: newCounter(-1),
 	}
 }
 
@@ -169,7 +169,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 		direct_opt = true
 	}
 
-	suffix := "[" + strconv.Itoa(m.counter.Incr(name)-1) + "]"
+	suffix := "[" + strconv.Itoa(m.counter.Incr(name)) + "]"
 	value, has := m.data[name+suffix]
 	if !has {
 		suffix = ""
@@ -349,7 +349,7 @@ func (m *sqlTemplate) sqlTranslate(operation, name, flag string, opts string) st
 		attention_opt = false
 	}
 
-	value, has := m.data[name+"["+strconv.Itoa(m.counter.Incr(name)-1)+"]"]
+	value, has := m.data[name+"["+strconv.Itoa(m.counter.Incr(name))+"]"]
 	if !has {
 		value, has = m.data[name]
 	}

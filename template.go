@@ -15,13 +15,13 @@ import (
 
 type simpleTemplate struct {
 	data    map[string]interface{}
-	counter counter
+	counter *counter
 }
 
 func newSimpleTemplate(kvs ...interface{}) *simpleTemplate {
 	return &simpleTemplate{
 		data:    makeMapOfkvs(kvs),
-		counter: newCounter(),
+		counter: newCounter(-1),
 	}
 }
 
@@ -126,7 +126,7 @@ func (m *simpleTemplate) Render(format string) string {
 			key = s[1:]
 		}
 
-		v, ok := m.data[key+"["+strconv.Itoa(m.counter.Incr(key)-1)+"]"]
+		v, ok := m.data[key+"["+strconv.Itoa(m.counter.Incr(key))+"]"]
 		if !ok {
 			v, ok = m.data[key]
 		}

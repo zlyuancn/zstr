@@ -8,26 +8,36 @@
 
 package zstr
 
-type counter map[string]int
-
-func newCounter() counter {
-	return make(map[string]int)
+// 计数器, 注意: 非并发安全
+type counter struct {
+	data map[string]int
+	def  int // 默认值
 }
 
-func (c counter) Incr(key string) int {
+func newCounter(def ...int) *counter {
+	c := &counter{
+		data: make(map[string]int),
+	}
+	if len(def) > 0 {
+		c.def = def[0]
+	}
+	return c
+}
+
+func (c *counter) Incr(key string) int {
 	return c.IncrBy(key, 1)
 }
 
-func (c counter) IncrBy(key string, num int) int {
-	if v, ok := c[key]; ok {
-		v += num
-		c[key] = v
-		return v
+func (c *counter) IncrBy(key string, num int) int {
+	v, ok := c.data[key]
+	if !ok {
+		v = c.def
 	}
-	c[key] = num
-	return num
+	v += num
+	c.data[key] = v
+	return v
 }
 
-func (c counter) Get(key string) int {
-	return c[key]
+func (c *counter) Get(key string) int {
+	return c.data[key]
 }
