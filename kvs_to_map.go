@@ -8,19 +8,25 @@
 
 package zstr
 
-// 构建map, 支持 map[string]string，map[string]interface{}，或健值对
-func MakeMapOfKvs(kvs ...interface{}) map[string]interface{} {
-	return makeMapOfkvs(kvs)
+import (
+	"strconv"
+)
+
+// 构建map, 支持 map[string]string，map[string]interface{}
+// 其它值按顺序转为 map[string]interface{}{"*[0]": 值0, "*[1]", 值1...}
+func MakeMapOfKvs(a ...interface{}) map[string]interface{} {
+	return makeMapOfkvs(a)
 }
 
-// 构建map, 支持 map[string]string，map[string]interface{}，或健值对
-func makeMapOfkvs(kvs []interface{}) map[string]interface{} {
+// 构建map, 支持 map[string]string，map[string]interface{}
+// 其它值按顺序转为 map[string]interface{}{"*[0]": 值0, "*[1]", 值1...}
+func makeMapOfkvs(a []interface{}) map[string]interface{} {
 	var data = make(map[string]interface{})
-	if len(kvs) == 0 {
+	if len(a) == 0 {
 		return data
 	}
 
-	switch p := kvs[0].(type) {
+	switch p := a[0].(type) {
 	case map[string]string:
 		for k, v := range p {
 			data[k] = v
@@ -33,11 +39,8 @@ func makeMapOfkvs(kvs []interface{}) map[string]interface{} {
 		return data
 	}
 
-	if len(kvs)&1 != 0 {
-		panic("输入的kvs必须为2的倍数")
-	}
-	for i := 0; i < len(kvs)-1; i += 2 {
-		data[anyToString(kvs[i])] = kvs[i+1]
+	for i, v := range a {
+		data[`*[`+strconv.Itoa(i)+`]`] = v
 	}
 	return data
 }
