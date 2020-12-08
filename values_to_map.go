@@ -9,6 +9,7 @@
 package zstr
 
 import (
+	"reflect"
 	"strconv"
 )
 
@@ -26,15 +27,11 @@ func makeMapOfValues(values []interface{}) map[string]interface{} {
 		return data
 	}
 
-	switch p := values[0].(type) {
-	case map[string]string:
-		for k, v := range p {
-			data[k] = v
-		}
-		return data
-	case map[string]interface{}:
-		for k, v := range p {
-			data[k] = v
+	rv := reflect.Indirect(reflect.ValueOf(values[0]))
+	switch rv.Kind() {
+	case reflect.Map:
+		for iter := rv.MapRange(); iter.Next(); {
+			data[anyToString(iter.Key().Interface())] = iter.Value().Interface()
 		}
 		return data
 	}
