@@ -53,16 +53,17 @@ var (
 )
 
 type sqlTemplate struct {
-	data    map[string]interface{}
-	names   []string
-	values  []interface{}
-	counter *counter
+	data       map[string]interface{}
+	names      []string
+	values     []interface{}
+	keyCounter *counter // key计数器
+	sub        int      // 下标计数器
 }
 
 func newSqlTemplate(kvs ...interface{}) *sqlTemplate {
 	return &sqlTemplate{
-		data:    makeMapOfkvs(kvs),
-		counter: newCounter(-1),
+		data:       makeMapOfkvs(kvs),
+		keyCounter: newCounter(-1),
 	}
 }
 
@@ -169,12 +170,17 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 		direct_opt = true
 	}
 
-	suffix := "[" + strconv.Itoa(m.counter.Incr(name)) + "]"
-	value, has := m.data[name+suffix]
+	vName := name + "[" + strconv.Itoa(m.keyCounter.Incr(name)) + "]"
+	value, has := m.data[vName]
 	if !has {
-		suffix = ""
+		vName = name
 		value, has = m.data[name]
 	}
+	if !has {
+		vName = "*[" + strconv.Itoa(m.sub) + "]"
+		value, has = m.data[vName]
+	}
+	m.sub++ // 每次一定+1
 
 	// 无值返回空sql语句
 	if !has {
@@ -203,7 +209,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 		if direct_opt {
 			return anyToSqlString(value, true)
 		}
-		m.addValue(name+suffix, value)
+		m.addValue(vName, value)
 		return "?"
 	case "@": // !attention_opt + direct
 		return anyToSqlString(value, false)
@@ -229,7 +235,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 	switch flag {
 	case ">", ">=", "<", "<=", "!=", "<>", "=":
 		makeSqlStr = func() string {
-			m.addValue(name+suffix, value)
+			m.addValue(vName, value)
 			return fmt.Sprintf(`%s %s %s ?`, operation, name, flag)
 		}
 		directWrite = func() string {
@@ -242,12 +248,12 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 		}
 		makeSqlStr = func() string {
 			if len(values) == 1 {
-				m.addValue(name+suffix, values[0])
+				m.addValue(vName, values[0])
 				return fmt.Sprintf(`%s %s = ?`, operation, name)
 			}
 			fs := make([]string, len(values))
 			for i, s := range values {
-				m.addValue(fmt.Sprintf("%s.in(%d)", name+suffix, i), s)
+				m.addValue(fmt.Sprintf("%s.in(%d)", vName, i), s)
 				fs[i] = "?"
 			}
 			return fmt.Sprintf(`%s %s in (%s)`, operation, name, strings.Join(fs, ","))
@@ -265,12 +271,12 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 		}
 		makeSqlStr = func() string {
 			if len(values) == 1 {
-				m.addValue(name+suffix, values[0])
+				m.addValue(vName, values[0])
 				return fmt.Sprintf(`%s %s != ?`, operation, name)
 			}
 			fs := make([]string, len(values))
 			for i, s := range values {
-				m.addValue(fmt.Sprintf("%s.not_in(%d)", name+suffix, i), s)
+				m.addValue(fmt.Sprintf("%s.not_in(%d)", vName, i), s)
 				fs[i] = "?"
 			}
 			return fmt.Sprintf(`%s %s not in (%s)`, operation, name, strings.Join(fs, ","))
@@ -283,7 +289,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 		}
 	case "like": // 包含xx
 		makeSqlStr = func() string {
-			m.addValue(name+suffix, "%"+anyToSqlString(value, false)+"%")
+			m.addValue(vName, "%"+anyToSqlString(value, false)+"%")
 			return fmt.Sprintf(`%s %s like ?`, operation, name)
 		}
 		directWrite = func() string {
@@ -291,7 +297,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 		}
 	case "likestart", "like_start": // 以xx开始
 		makeSqlStr = func() string {
-			m.addValue(name+suffix, anyToSqlString(value, false)+"%")
+			m.addValue(vName, anyToSqlString(value, false)+"%")
 			return fmt.Sprintf(`%s %s like ?`, operation, name)
 		}
 		directWrite = func() string {
@@ -299,7 +305,7 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 		}
 	case "likeend", "like_end": // 以xx结束
 		makeSqlStr = func() string {
-			m.addValue(name+suffix, "%"+anyToSqlString(value, false))
+			m.addValue(vName, "%"+anyToSqlString(value, false))
 			return fmt.Sprintf(`%s %s like ?`, operation, name)
 		}
 		directWrite = func() string {
@@ -349,10 +355,14 @@ func (m *sqlTemplate) sqlTranslate(operation, name, flag string, opts string) st
 		attention_opt = false
 	}
 
-	value, has := m.data[name+"["+strconv.Itoa(m.counter.Incr(name))+"]"]
+	value, has := m.data[name+"["+strconv.Itoa(m.keyCounter.Incr(name))+"]"]
 	if !has {
 		value, has = m.data[name]
 	}
+	if !has {
+		value, has = m.data["*["+strconv.Itoa(m.sub)+"]"]
+	}
+	m.sub++ // 每次一定+1
 
 	// 无值返回空sql语句
 	if !has {
@@ -489,7 +499,11 @@ func (m *sqlTemplate) parseToSlice(a interface{}) []interface{} {
 //     d:   direct, 直接将值写入sql语句中
 //     m:   must, 必须传值, 值可以为零值
 //
-// 输入的kvs必须为：map[string]string, map[string]interface{}, 或健值对
+// 输入的kvs必须为：map[string]string, map[string]interface{}，或按顺序传入值
+//
+// 寻值优先级:
+//    匹配名下标 > 匹配名 > *下标
+//    如:  a[0] > a > *[0]
 //
 // 注意:
 //     一般情况下如果name没有传参或为该类型的零值, 则替换为空字符串
@@ -498,10 +512,10 @@ func (m *sqlTemplate) parseToSlice(a interface{}) []interface{} {
 //         变量名首位可以为数字, 变量中间可以连续出现多个小数点, 如 0..a 是合法的
 //
 // 示例:
-//    s := SqlTemplateRender("select * from t where &a {&b} {&c !=} {&d in} {|e} limit 1", map[string]interface{}{
+//    s := SqlRender("select * from t where &a {&b} {&c !=} {&d in} {|e} limit 1", map[string]interface{}{
 //		"a": 1,
-//		"b": "2",
-//		"c": 3.3,
+//		"b[0]": "2",
+//		"*[2]": 3.3,
 //		"d": []string{"4"},
 //		"e": nil,
 //	  })
