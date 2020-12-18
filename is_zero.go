@@ -10,6 +10,7 @@ package zstr
 
 import (
 	"reflect"
+	"unsafe"
 )
 
 // 判断传入参数是否为该类型的零值
@@ -24,7 +25,7 @@ func IsZero(a interface{}) bool {
 	case []byte:
 		return len(v) == 0
 	case bool:
-		return v
+		return !v
 
 	case int:
 		return v == 0
@@ -57,14 +58,44 @@ func IsZero(a interface{}) bool {
 	r_v := reflect.Indirect(reflect.ValueOf(a))
 
 	switch r_v.Kind() {
-	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
+	case reflect.Array:
+		return arrayIsZero(r_v)
+	case reflect.String:
 		return r_v.Len() == 0
 	case reflect.Invalid:
 		return true
-	case reflect.Chan, reflect.UnsafePointer:
+	case reflect.Chan, reflect.Func, reflect.Map, reflect.Ptr, reflect.UnsafePointer, reflect.Interface, reflect.Slice:
 		return r_v.IsNil()
+	case reflect.Struct:
+		return structIsZero(r_v)
 	}
 
 	nv := reflect.New(r_v.Type()).Elem().Interface()
 	return r_v.Interface() == nv
+}
+
+func structIsZero(r_v reflect.Value) bool {
+	num := r_v.NumField()
+	for i := 0; i < num; i++ {
+		field := r_v.Field(i)
+		if !field.CanAddr() {
+			continue
+		}
+		v := reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr()))
+		if !IsZero(v.Elem().Interface()) {
+			return false
+		}
+	}
+	return true
+}
+
+func arrayIsZero(r_v reflect.Value) bool {
+	num := r_v.Len()
+	for i := 0; i < num; i++ {
+		value := r_v.Index(i)
+		if !IsZero(value.Interface()) {
+			return false
+		}
+	}
+	return true
 }
