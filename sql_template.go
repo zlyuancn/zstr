@@ -165,7 +165,10 @@ func (m *sqlTemplate) translate(operation, name, flag string, opts string) strin
 			panic(fmt.Sprintf(`syntax error, non-supported option "%s"`, string(o)))
 		}
 	}
-	if operation == "@" {
+	switch operation {
+	case "#":
+		attention_opt = true
+	case "@":
 		attention_opt = false
 		direct_opt = true
 	}
@@ -351,7 +354,10 @@ func (m *sqlTemplate) sqlTranslate(operation, name, flag string, opts string) st
 			panic(fmt.Sprintf(`syntax error, non-supported option "%s"`, string(o)))
 		}
 	}
-	if operation == "@" {
+	switch operation {
+	case "#":
+		attention_opt = true
+	case "@":
 		attention_opt = false
 	}
 
@@ -480,7 +486,7 @@ func (m *sqlTemplate) parseToSlice(a interface{}) []interface{} {
 // 操作符:
 //     &: 转为 and name flag value
 //     |: 转为 or name flag value
-//     #: 转为 value, 仅支持以下格式
+//     #: 转为 value, 自带 attention 选项, 仅支持以下格式
 //          (操作符)(name)
 //          {(操作符)(name)}
 //          {(操作符)(name) (选项)}
