@@ -58,6 +58,9 @@ func (m *sqlTemplate) repairSql(sql string) string {
 		if strings.HasSuffix(result, "where ") {
 			result = result[:len(result)-6]
 		}
+		if strings.HasSuffix(result, "where ;") {
+			result = result[:len(result)-7] + ";"
+		}
 	}
 	return result
 }
