@@ -55,44 +55,84 @@ func IsZero(a interface{}) bool {
 		return v == 0
 	}
 
-	r_v := reflect.Indirect(reflect.ValueOf(a))
+	rv := reflect.Indirect(reflect.ValueOf(a))
 
-	switch r_v.Kind() {
+	switch rv.Kind() {
 	case reflect.Array:
-		return arrayIsZero(r_v)
+		return arrayIsZero(rv)
 	case reflect.String:
-		return r_v.Len() == 0
+		return rv.Len() == 0
 	case reflect.Invalid:
 		return true
 	case reflect.Chan, reflect.Func, reflect.Map, reflect.Ptr, reflect.UnsafePointer, reflect.Interface, reflect.Slice:
-		return r_v.IsNil()
+		return rv.IsNil()
 	case reflect.Struct:
-		return structIsZero(r_v)
+		return structIsZero(rv)
 	}
 
-	nv := reflect.New(r_v.Type()).Elem().Interface()
-	return r_v.Interface() == nv
+	nv := reflect.New(rv.Type()).Elem().Interface()
+	return rv.Interface() == nv
 }
 
 func structIsZero(r_v reflect.Value) bool {
 	num := r_v.NumField()
 	for i := 0; i < num; i++ {
 		field := r_v.Field(i)
-		if !field.CanAddr() {
+		if field.Kind() == reflect.Invalid {
 			continue
 		}
-		v := reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr()))
-		if !IsZero(v.Elem().Interface()) {
-			return false
+
+		// 尝试获取值
+		if field.CanInterface() {
+			switch field.Kind() {
+			case reflect.Ptr, reflect.Interface:
+				if field.Interface() != nil {
+					return false
+				}
+			default:
+				if !IsZero(field.Interface()) {
+					return false
+				}
+			}
+			continue
+		}
+
+		var temp reflect.Value
+		// 尝试获取指针
+		if field.CanAddr() {
+			temp = reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr()))
+		} else {
+			// 强行获取数据
+			rv := reflect.ValueOf(&field).Elem().Field(1).UnsafeAddr() // &field.ptr
+			rv = *(*uintptr)(unsafe.Pointer(rv))                       // field.ptr
+			temp = reflect.NewAt(field.Type(), unsafe.Pointer(rv))
+		}
+
+		switch field.Kind() {
+		case reflect.Ptr, reflect.Interface:
+			if temp.Elem().Interface() != nil {
+				return false
+			}
+		default:
+			if !IsZero(temp.Elem().Interface()) {
+				return false
+			}
 		}
 	}
 	return true
 }
 
-func arrayIsZero(r_v reflect.Value) bool {
-	num := r_v.Len()
+func arrayIsZero(rv reflect.Value) bool {
+	num := rv.Len()
 	for i := 0; i < num; i++ {
-		value := r_v.Index(i)
+		value := rv.Index(i)
+		switch value.Kind() {
+		case reflect.Ptr, reflect.Interface:
+			if value.Interface() != nil {
+				return false
+			}
+			continue
+		}
 		if !IsZero(value.Interface()) {
 			return false
 		}
