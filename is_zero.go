@@ -86,7 +86,7 @@ func structIsZero(r_v reflect.Value) bool {
 		if field.CanInterface() {
 			switch field.Kind() {
 			case reflect.Ptr, reflect.Interface:
-				if field.Interface() != nil {
+				if !field.IsNil() {
 					return false
 				}
 			default:
@@ -110,7 +110,7 @@ func structIsZero(r_v reflect.Value) bool {
 
 		switch field.Kind() {
 		case reflect.Ptr, reflect.Interface:
-			if temp.Elem().Interface() != nil {
+			if !temp.IsNil() {
 				return false
 			}
 		default:
