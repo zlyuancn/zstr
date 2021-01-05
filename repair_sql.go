@@ -53,6 +53,12 @@ func (m *sqlTemplate) repairSql(sql string) string {
 		result = m.ReplaceAllIgnoreCase(result, "where group by", "group by")
 		result = m.ReplaceAllIgnoreCase(result, "where limit", "limit")
 		result = m.ReplaceAllIgnoreCase(result, "where )", ")")
+		result = m.ReplaceAllIgnoreCase(result, "( and", "(")
+		result = m.ReplaceAllIgnoreCase(result, "(and", "(")
+		result = m.ReplaceAllIgnoreCase(result, "( or", "(")
+		result = m.ReplaceAllIgnoreCase(result, "(or", "(")
+		result = m.ReplaceAllIgnoreCase(result, "( )", "")
+		result = m.ReplaceAllIgnoreCase(result, "()", "")
 		if m.HasSuffixIgnoreCase(result, "where ") {
 			result = result[:len(result)-6]
 		}
