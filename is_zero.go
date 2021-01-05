@@ -16,107 +16,64 @@ import (
 // 判断传入参数是否为该类型的零值
 func IsZero(a interface{}) bool {
 	switch v := a.(type) {
-
 	case nil:
 		return true
-
 	case string:
 		return v == ""
 	case []byte:
-		return len(v) == 0
+		return v == nil
 	case bool:
 		return !v
 
-	case int:
-		return v == 0
-	case int8:
-		return v == 0
-	case int16:
-		return v == 0
-	case int32:
-		return v == 0
-	case int64:
-		return v == 0
-
-	case uint:
-		return v == 0
-	case uint8:
-		return v == 0
-	case uint16:
-		return v == 0
-	case uint32:
-		return v == 0
-	case uint64:
-		return v == 0
-
-	case float32:
-		return v == 0
-	case float64:
+	case int, int8, int16, int32, int64,
+		uint, uint8, uint16, uint32, uint64, uintptr,
+		float32, float64, complex64, complex128:
 		return v == 0
 	}
 
-	rv := reflect.Indirect(reflect.ValueOf(a))
+	rv := reflect.Indirect(reflect.ValueOf(a)) // 解包ptr
+	return reflectValueIsZero(rv)
+}
 
+func reflectValueIsZero(rv reflect.Value) bool {
 	switch rv.Kind() {
+	case reflect.Invalid:
+		return true
 	case reflect.Array:
 		return arrayIsZero(rv)
 	case reflect.String:
 		return rv.Len() == 0
-	case reflect.Invalid:
-		return true
 	case reflect.Chan, reflect.Func, reflect.Map, reflect.Ptr, reflect.UnsafePointer, reflect.Interface, reflect.Slice:
 		return rv.IsNil()
 	case reflect.Struct:
 		return structIsZero(rv)
 	}
 
-	nv := reflect.New(rv.Type()).Elem().Interface()
-	return rv.Interface() == nv
+	nv := reflect.New(rv.Type()).Elem().Interface() // 根据类型创建新的数据
+
+	// 尝试获取值
+	if rv.CanInterface() {
+		return rv.Interface() == nv
+	}
+
+	var p uintptr
+	if rv.CanAddr() { // 尝试获取指针
+		p = rv.UnsafeAddr()
+	} else {
+		// 强行获取指针
+		p = reflect.ValueOf(&rv).Elem().Field(1).UnsafeAddr() // &rv.ptr
+		p = *(*uintptr)(unsafe.Pointer(p))                    // rv.ptr
+	}
+
+	temp := reflect.NewAt(rv.Type(), unsafe.Pointer(p)) // 根据指针创建新的数据
+	return temp.Elem().Interface() == nv
 }
 
-func structIsZero(r_v reflect.Value) bool {
-	num := r_v.NumField()
+func structIsZero(rv reflect.Value) bool {
+	num := rv.NumField()
 	for i := 0; i < num; i++ {
-		field := r_v.Field(i)
-		if field.Kind() == reflect.Invalid {
-			continue
-		}
-
-		// 尝试获取值
-		if field.CanInterface() {
-			switch field.Kind() {
-			case reflect.Ptr, reflect.Interface:
-				if !field.IsNil() {
-					return false
-				}
-			default:
-				if !IsZero(field.Interface()) {
-					return false
-				}
-			}
-			continue
-		}
-
-		var temp reflect.Value
-		// 尝试获取指针
-		if field.CanAddr() {
-			temp = reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr()))
-		} else {
-			// 强行获取数据
-			rv := reflect.ValueOf(&field).Elem().Field(1).UnsafeAddr() // &field.ptr
-			rv = *(*uintptr)(unsafe.Pointer(rv))                       // field.ptr
-			temp = reflect.NewAt(field.Type(), unsafe.Pointer(rv))
-		}
-
-		switch field.Kind() {
-		case reflect.Ptr, reflect.Interface:
-			if !temp.IsNil() {
-				return false
-			}
-		default:
-			if !IsZero(temp.Elem().Interface()) {
-				return false
-			}
+		if !reflectValueIsZero(rv.Field(i)) {
+			return false
 		}
 	}
 	return true
@@ -125,15 +82,7 @@ func structIsZero(r_v reflect.Value) bool {
 func arrayIsZero(rv reflect.Value) bool {
 	num := rv.Len()
 	for i := 0; i < num; i++ {
-		value := rv.Index(i)
-		switch value.Kind() {
-		case reflect.Ptr, reflect.Interface:
-			if value.Interface() != nil {
-				return false
-			}
-			continue
-		}
-		if !IsZero(value.Interface()) {
+		if !reflectValueIsZero(rv.Index(i)) {
 			return false
 		}
 	}
