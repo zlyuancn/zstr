@@ -47,6 +47,12 @@ func (m *sqlTemplate) repairSql(sql string) string {
 	result := m.retractAllSpace(sql)
 
 	if m.ContainsIgnoreCase(result, "where") {
+		result = m.ReplaceAllIgnoreCase(result, "where ( )", "where")
+		result = m.ReplaceAllIgnoreCase(result, "where ()", "where")
+		result = m.ReplaceAllIgnoreCase(result, "and ( )", "")
+		result = m.ReplaceAllIgnoreCase(result, "and ()", "")
+		result = m.ReplaceAllIgnoreCase(result, "or ( )", "")
+		result = m.ReplaceAllIgnoreCase(result, "or ()", "")
 		result = m.ReplaceAllIgnoreCase(result, "where or ", "where ")
 		result = m.ReplaceAllIgnoreCase(result, "where and ", "where ")
 		result = m.ReplaceAllIgnoreCase(result, "where order by", "order by")
@@ -57,8 +63,6 @@ func (m *sqlTemplate) repairSql(sql string) string {
 		result = m.ReplaceAllIgnoreCase(result, "(and", "(")
 		result = m.ReplaceAllIgnoreCase(result, "( or", "(")
 		result = m.ReplaceAllIgnoreCase(result, "(or", "(")
-		result = m.ReplaceAllIgnoreCase(result, "( )", "")
-		result = m.ReplaceAllIgnoreCase(result, "()", "")
 		if m.HasSuffixIgnoreCase(result, "where ") {
 			result = result[:len(result)-6]
 		}
