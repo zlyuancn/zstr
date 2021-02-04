@@ -57,7 +57,7 @@ func (m *sqlTemplate) repairSql(sql string) string {
 		result = m.ReplaceAllIgnoreCase(result, "where and ", "where ")
 		result = m.ReplaceAllIgnoreCase(result, "where order by", "order by")
 		result = m.ReplaceAllIgnoreCase(result, "where group by", "group by")
-		result = m.ReplaceAllIgnoreCase(result, "where limit", "limit")
+		result = m.ReplaceAllIgnoreCase(result, "where limit ", "limit ")
 		result = m.ReplaceAllIgnoreCase(result, "where )", ")")
 		result = m.ReplaceAllIgnoreCase(result, "( and", "(")
 		result = m.ReplaceAllIgnoreCase(result, "(and", "(")
