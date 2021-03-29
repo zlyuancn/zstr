@@ -136,7 +136,7 @@ func (m *simpleTemplate) Render(format string) string {
 		}
 		m.sub++ // 每次一定+1
 		if ok {
-			return anyToString(v)
+			return anyToString(v, true)
 		}
 		if crust {
 			return ""

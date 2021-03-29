@@ -16,15 +16,18 @@ import (
 )
 
 // 任何值转字符串
-func AnyToStr(a interface{}) string {
-	return anyToString(a)
+func AnyToStr(a interface{}, nilToEmpty ...bool) string {
+	return anyToString(a, nilToEmpty...)
 }
 
 // 任何值转字符串
-func anyToString(a interface{}) string {
+func anyToString(a interface{}, nilToEmpty ...bool) string {
 	switch v := a.(type) {
 
 	case nil:
+		if len(nilToEmpty) > 0 && nilToEmpty[0] {
+			return ""
+		}
 		return "nil"
 
 	case string:

@@ -494,9 +494,9 @@ func GetFloat64(any interface{}, def ...float64) float64 {
 	return 0
 }
 
-func ToString(a interface{}) string {
-	return anyToString(a)
+func ToString(a interface{}, nilToEmpty ...bool) string {
+	return anyToString(a, nilToEmpty...)
 }
-func GetString(a interface{}) string {
-	return anyToString(a)
+func GetString(a interface{}, nilToEmpty ...bool) string {
+	return anyToString(a, nilToEmpty...)
 }
