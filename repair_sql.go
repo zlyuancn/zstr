@@ -55,14 +55,14 @@ var repairSqlTexts = []struct {
 	{"and ()", "", true},
 	{"or ( )", "", true},
 	{"or ()", "", true},
-	{"where ( )", "where", true},
-	{"where ()", "where", true},
+	{"where ( )", "where", false},
+	{"where ()", "where", false},
 	{"where and ", "where ", false},
 	{"where or ", "where ", false},
-	{"where order by", "order by", true},
-	{"where group by", "group by", true},
+	{"where order by ", "order by", false},
+	{"where group by ", "group by", false},
 	{"where limit ", "limit ", false},
-	{"where )", ")", true},
+	{"where )", ")", false},
 }
 
 // 修复模板渲染后无效的sql语句
