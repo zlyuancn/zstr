@@ -42,33 +42,44 @@ func (m *sqlTemplate) retractAllSpace(s string) string {
 	return buff.String()
 }
 
+var repairSqlTexts = []struct {
+	Old     string // 原始数据
+	New     string // 新数据
+	Retract bool   // 是否缩进
+}{
+	{"( and", "(", false},
+	{"(and", "(", false},
+	{"( or", "(", false},
+	{"(or", "(", false},
+	{"and ( )", "", true},
+	{"and ()", "", true},
+	{"or ( )", "", true},
+	{"or ()", "", true},
+	{"where ( )", "where", true},
+	{"where ()", "where", true},
+	{"where and ", "where ", false},
+	{"where or ", "where ", false},
+	{"where order by", "order by", true},
+	{"where group by", "group by", true},
+	{"where limit ", "limit ", false},
+	{"where )", ")", true},
+}
+
 // 修复模板渲染后无效的sql语句
 func (m *sqlTemplate) repairSql(sql string) string {
 	result := m.retractAllSpace(sql)
 
-	if m.ContainsIgnoreCase(result, "where") {
-		result = m.ReplaceAllIgnoreCase(result, "where ( )", "where")
-		result = m.ReplaceAllIgnoreCase(result, "where ()", "where")
-		result = m.ReplaceAllIgnoreCase(result, "and ( )", "")
-		result = m.ReplaceAllIgnoreCase(result, "and ()", "")
-		result = m.ReplaceAllIgnoreCase(result, "or ( )", "")
-		result = m.ReplaceAllIgnoreCase(result, "or ()", "")
-		result = m.ReplaceAllIgnoreCase(result, "where or ", "where ")
-		result = m.ReplaceAllIgnoreCase(result, "where and ", "where ")
-		result = m.ReplaceAllIgnoreCase(result, "where order by", "order by")
-		result = m.ReplaceAllIgnoreCase(result, "where group by", "group by")
-		result = m.ReplaceAllIgnoreCase(result, "where limit ", "limit ")
-		result = m.ReplaceAllIgnoreCase(result, "where )", ")")
-		result = m.ReplaceAllIgnoreCase(result, "( and", "(")
-		result = m.ReplaceAllIgnoreCase(result, "(and", "(")
-		result = m.ReplaceAllIgnoreCase(result, "( or", "(")
-		result = m.ReplaceAllIgnoreCase(result, "(or", "(")
-		if m.HasSuffixIgnoreCase(result, "where ") {
-			result = result[:len(result)-6]
+	for _, r := range repairSqlTexts {
+		result = m.ReplaceAllIgnoreCase(result, r.Old, r.New)
+		if r.Retract {
+			result = m.retractAllSpace(result)
 		}
-		if m.HasSuffixIgnoreCase(result, "where ;") {
-			result = result[:len(result)-7] + ";"
-		}
+	}
+	if m.HasSuffixIgnoreCase(result, "where ") {
+		result = result[:len(result)-6]
+	}
+	if m.HasSuffixIgnoreCase(result, "where ;") {
+		result = result[:len(result)-7] + ";"
 	}
 	return result
 }
