@@ -60,7 +60,7 @@ type sqlTemplate struct {
 	sub        int      // 下标计数器
 }
 
-func newSqlTemplate(values ...interface{}) *sqlTemplate {
+func newSqlTemplate(values []interface{}) *sqlTemplate {
 	return &sqlTemplate{
 		data:       makeMapOfValues(values),
 		keyCounter: newCounter(-1),
@@ -610,22 +610,22 @@ func (m *sqlTemplate) sqlTemplateSyntaxParse(text string) (operation, name, flag
 
 // sql模板解析
 func SqlTemplateParse(sql_template string, values ...interface{}) (sql_str string, names []string, args []interface{}) {
-	return newSqlTemplate(values...).Parse(sql_template)
+	return newSqlTemplate(values).Parse(sql_template)
 }
 
 // sql模板解析, 和SqlTemplateParse一样, 只是简短了函数名
 func SqlParse(sql_template string, values ...interface{}) (sql_str string, names []string, args []interface{}) {
-	return newSqlTemplate(values...).Parse(sql_template)
+	return newSqlTemplate(values).Parse(sql_template)
 }
 
 // sql模板渲染
 //
 // 值会直接写入sql语句中, 不支持sql注入检查
 func SqlTemplateRender(sql_template string, values ...interface{}) string {
-	return newSqlTemplate(values...).Render(sql_template)
+	return newSqlTemplate(values).Render(sql_template)
 }
 
 // sql模板渲染, 和SqlTemplateRender一样, 只是简短了函数名
 func SqlRender(sql_template string, values ...interface{}) string {
-	return newSqlTemplate(values...).Render(sql_template)
+	return newSqlTemplate(values).Render(sql_template)
 }
