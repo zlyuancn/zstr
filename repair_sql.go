@@ -64,6 +64,12 @@ var repairSqlTexts = []struct {
 	{"where limit ", "limit ", false},
 	{"where )", ")", false},
 }
+var repairSqlSuffixes = []string{
+	"where",
+	"where ",
+	"where;",
+	"where ;",
+}
 
 // 修复模板渲染后无效的sql语句
 func (m *sqlTemplate) repairSql(sql string) string {
@@ -75,11 +81,11 @@ func (m *sqlTemplate) repairSql(sql string) string {
 			result = m.retractAllSpace(result)
 		}
 	}
-	if m.HasSuffixIgnoreCase(result, "where ") {
-		result = result[:len(result)-6]
-	}
-	if m.HasSuffixIgnoreCase(result, "where ;") {
-		result = result[:len(result)-7] + ";"
+	for _, suffix := range repairSqlSuffixes {
+		if m.HasSuffixIgnoreCase(result, suffix) {
+			result = result[:len(result)-len(suffix)]
+			return result
+		}
 	}
 	return result
 }
