@@ -40,7 +40,7 @@ func makeMapOfValues(values []interface{}) map[string]interface{} {
 		data := make(map[string]interface{}, len(values))
 		for _, value := range values {
 			kv, ok := value.(KV)
-			if ok {
+			if !ok {
 				panic("所有值必须都是 zstr.KV")
 			}
 			data[kv.K] = kv.V
@@ -50,7 +50,7 @@ func makeMapOfValues(values []interface{}) map[string]interface{} {
 		data := make(map[string]interface{}, len(values))
 		for _, value := range values {
 			kv, ok := value.(*KV)
-			if ok {
+			if !ok {
 				panic("所有值必须都是 *zstr.KV")
 			}
 			data[kv.K] = kv.V
