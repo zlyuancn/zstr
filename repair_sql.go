@@ -59,8 +59,8 @@ var repairSqlTexts = []struct {
 	{"where ()", "where", false},
 	{"where and ", "where ", false},
 	{"where or ", "where ", false},
-	{"where order by ", "order by", false},
-	{"where group by ", "group by", false},
+	{"where order by ", "order by ", false},
+	{"where group by ", "group by ", false},
 	{"where limit ", "limit ", false},
 	{"where )", ")", false},
 }
