@@ -19,9 +19,9 @@ func ToBytes(s string) []byte {
 
 func ToBool(s string) (bool, error) {
 	switch s {
-	case "1", "t", "T", "true", "TRUE", "True", "y", "Y", "yes", "YES", "Yes", "on", "ON", "On", "ok", "OK", "Ok":
+	case "1", "t", "T", "true", "TRUE", "True", "y", "Y", "yes", "YES", "Yes", "on", "ON", "On", "ok", "OK", "Ok", "enabled", "ENABLED", "Enabled":
 		return true, nil
-	case "0", "f", "F", "false", "FALSE", "False", "n", "N", "no", "NO", "No", "off", "OFF", "Off":
+	case "0", "f", "F", "false", "FALSE", "False", "n", "N", "no", "NO", "No", "off", "OFF", "Off", "disable", "DISABLE", "Disable":
 		return false, nil
 	}
 	return false, fmt.Errorf("数据\"%s\"无法转换为bool", s)
