@@ -73,9 +73,9 @@ GetString
 
 ```text
 # 能转为true的数据
-1, t, T, true, TRUE, True, y, Y, yes, YES, Yes, on, ON, On, ok, OK, Ok
+1, t, T, true, TRUE, True, y, Y, yes, YES, Yes, on, ON, On, ok, OK, Ok, enabled, ENABLED, Enabled
 # 能转为false数据
-nil, 0, f, F, false, FALSE, False, n, N, no, NO, No, off, OFF, Off
+nil, 0, f, F, false, FALSE, False, n, N, no, NO, No, off, OFF, Off, disable, DISABLE, Disable
 ```
 
 # 模板渲染
