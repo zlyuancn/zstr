@@ -21,7 +21,7 @@ func (m String) Val() string {
 	return string(m)
 }
 func (m String) Bytes() []byte {
-	return []byte(m)
+	return StringToBytes((*string)(&m))
 }
 
 func (m String) Bool() (bool, error) {

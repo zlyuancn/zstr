@@ -16,7 +16,7 @@ import (
 )
 
 func ToBytes(s string) []byte {
-	return []byte(s)
+	return StringToBytes(&s)
 }
 
 func ToBool(any interface{}) (bool, error) {

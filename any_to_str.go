@@ -33,7 +33,7 @@ func anyToString(a interface{}, nilToEmpty ...bool) string {
 	case string:
 		return v
 	case []byte:
-		return string(v)
+		return *BytesToString(v)
 	case bool:
 		if v {
 			return "true"
@@ -84,9 +84,9 @@ func anyToSqlString(a interface{}, str_crust bool) string {
 		return v
 	case []byte:
 		if str_crust {
-			return `'` + string(v) + `'`
+			return `'` + *BytesToString(v) + `'`
 		}
-		return string(v)
+		return *BytesToString(v)
 	case bool:
 		if v {
 			return "true"
