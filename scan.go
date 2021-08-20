@@ -86,3 +86,61 @@ func Scan(s string, outPtr interface{}) (err error) {
 	}
 	return
 }
+
+// 扫描任何值到任何, 不支持切片, 数组, Map, Struct
+func ScanAny(any, outPtr interface{}) (err error) {
+	switch t := any.(type) {
+	case []byte:
+		return Scan(*BytesToString(t), outPtr)
+	case string:
+		return Scan(t, outPtr)
+	}
+
+	switch p := outPtr.(type) {
+	case AnyUnmarshaler:
+		return p.UnmarshalAny(any)
+	}
+
+	switch p := outPtr.(type) {
+	case nil:
+		return fmt.Errorf("zstr.Scan(nil)")
+
+	case *string:
+		*p = GetString(any)
+	case *[]byte:
+		s := GetString(any)
+		*p = StringToBytes(&s)
+	case *bool:
+		*p, err = ToBool(any)
+	case *int:
+		*p, err = ToInt(any)
+	case *int8:
+		*p, err = ToInt8(any)
+	case *int16:
+		*p, err = ToInt16(any)
+	case *int32:
+		*p, err = ToInt32(any)
+	case *int64:
+		*p, err = ToInt64(any)
+
+	case *uint:
+		*p, err = ToUint(any)
+	case *uint8:
+		*p, err = ToUint8(any)
+	case *uint16:
+		*p, err = ToUint16(any)
+	case *uint32:
+		*p, err = ToUint32(any)
+	case *uint64:
+		*p, err = ToUint64(any)
+
+	case *float32:
+		*p, err = ToFloat32(any)
+	case *float64:
+		*p, err = ToFloat64(any)
+
+	default:
+		return fmt.Errorf("zstr.Scan(%T)无法解码, 考虑为它实现zstr.AnyUnmarshaler接口", p)
+	}
+	return
+}
