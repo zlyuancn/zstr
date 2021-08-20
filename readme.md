@@ -6,10 +6,13 @@
 <!-- TOC -->
 
 - [字符串工具](#%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%B7%A5%E5%85%B7)
-    - [示例](#%E7%A4%BA%E4%BE%8B)
-    - [快捷函数](#%E5%BF%AB%E6%8D%B7%E5%87%BD%E6%95%B0)
-    - [其他方法](#%E5%85%B6%E4%BB%96%E6%96%B9%E6%B3%95)
+    - [转为指定类型](#%E8%BD%AC%E4%B8%BA%E6%8C%87%E5%AE%9A%E7%B1%BB%E5%9E%8B)
+    - [扫描到变量](#%E6%89%AB%E6%8F%8F%E5%88%B0%E5%8F%98%E9%87%8F)
+- [转换函数](#%E8%BD%AC%E6%8D%A2%E5%87%BD%E6%95%B0)
     - [Boolean支持](#boolean%E6%94%AF%E6%8C%81)
+- [扫描函数](#%E6%89%AB%E6%8F%8F%E5%87%BD%E6%95%B0)
+    - [将字符串扫描到指定变量](#%E5%B0%86%E5%AD%97%E7%AC%A6%E4%B8%B2%E6%89%AB%E6%8F%8F%E5%88%B0%E6%8C%87%E5%AE%9A%E5%8F%98%E9%87%8F)
+    - [将任何值扫描到指定变量](#%E5%B0%86%E4%BB%BB%E4%BD%95%E5%80%BC%E6%89%AB%E6%8F%8F%E5%88%B0%E6%8C%87%E5%AE%9A%E5%8F%98%E9%87%8F)
 - [模板渲染](#%E6%A8%A1%E6%9D%BF%E6%B8%B2%E6%9F%93)
     - [示例](#%E7%A4%BA%E4%BE%8B)
     - [变量名](#%E5%8F%98%E9%87%8F%E5%90%8D)
@@ -38,35 +41,48 @@
 
 # 字符串工具
 
-## 示例
-
 ```go
+// 转为zstr.String类型
 s := zstr.String("1")
-s.Val()     // 获取val
-s.GetBool() // 获取bool
-s.GetInt()  // 获取int
-var a float64
-_ = s.Scan(&a) // 扫描到a中
 ```
 
-## 快捷函数
+## 转为指定类型
 
 ```go
-zstr.GetString("1")
-zstr.GetBool("1")
-zstr.GetInt("1")
-var a float64
-zstr.Scan("1", &a)
+s.String()      // 获取string
+s.GetBool()     // 获取bool
+s.GetInt()      // 获取int
+s.GetInt32()    // 获取int32
+s.GetUint64()   // 获取uint64
+s.GetFloat32()  // 获取float32
+s.Get...
 ```
 
-## 其他方法
-> GetXXX方法不仅仅支持string, 它支持传入任何类型
+## 扫描到变量
 
-```text
-GetInt  GetInt8  GetInt16  GetInt32  GetInt64
-GetUint  GetUint8  GetUint16  GetUint32  GetUint64
-GetFloat32  GetFloat64
-GetString
+输出变量不支持切片,数组,map,struct
+
+```go
+var a float64
+var b uint32
+var c bool
+var d string
+_ = s.Scan(&a)
+_ = s.Scan(&b)
+_ = s.Scan(&c)
+_ = s.Scan(&d)
+```
+
+# 转换函数
+
+输出变量不支持切片,数组,map,struct
+
+```go
+zstr.GetString(1)       // 1
+zstr.GetBool(1)         // true
+zstr.GetInt(true)       // 1
+zstr.GetFloat32("3.2")  // 3.2
+zstr.Get...
 ```
 
 ## Boolean支持
@@ -76,6 +92,36 @@ GetString
 1, t, T, true, TRUE, True, y, Y, yes, YES, Yes, on, ON, On, ok, OK, Ok, enabled, ENABLED, Enabled
 # 能转为false数据
 nil, 0, f, F, false, FALSE, False, n, N, no, NO, No, off, OFF, Off, disable, DISABLE, Disable
+```
+
+# 扫描函数
+
+输出变量不支持切片,数组,map,struct
+
+## 将字符串扫描到指定变量
+
+```
+var a float64
+var b uint32
+var c bool
+var d string
+zstr.Scan("1", &a)  // 1
+zstr.Scan("1", &b)  // 1
+zstr.Scan("1", &c)  // true
+zstr.Scan("1", &d)  // 1
+```
+
+## 将任何值扫描到指定变量
+
+```
+var a float64
+var b uint32
+var c bool
+var d string
+zstr.ScanAny(true, &a)     // 1
+zstr.ScanAny(false, &b)    // 0
+zstr.ScanAny("ok", &c)     // true
+zstr.ScanAny(1.23, &d)     // 1.23
 ```
 
 # 模板渲染

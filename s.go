@@ -213,6 +213,7 @@ func (m String) GetFloat64(def ...float64) float64 {
 	return 0
 }
 
+// 扫描到任何, 输出变量不支持切片,数组,map,struct
 func (m String) Scan(outPtr interface{}) error {
 	return Scan(string(m), outPtr)
 }

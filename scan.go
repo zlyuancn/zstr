@@ -18,6 +18,7 @@ type AnyUnmarshaler interface {
 	UnmarshalAny(any interface{}) error
 }
 
+// 扫描字符串到任何, 输出变量不支持切片,数组,map,struct
 func Scan(s string, outPtr interface{}) (err error) {
 	switch p := outPtr.(type) {
 	case encoding.BinaryUnmarshaler:
@@ -87,7 +88,7 @@ func Scan(s string, outPtr interface{}) (err error) {
 	return
 }
 
-// 扫描任何值到任何, 不支持切片, 数组, Map, Struct
+// 扫描任何值到任何, 输出变量不支持切片,数组,map,struct
 func ScanAny(any, outPtr interface{}) (err error) {
 	switch t := any.(type) {
 	case []byte:
