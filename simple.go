@@ -28,9 +28,15 @@ func ToBool(any interface{}) (bool, error) {
 	}
 	s := anyToString(any)
 	switch s {
-	case "1", "t", "T", "true", "TRUE", "True", "y", "Y", "yes", "YES", "Yes", "on", "ON", "On", "ok", "OK", "Ok", "enabled", "ENABLED", "Enabled":
+	case "1", "t", "T", "true", "TRUE", "True", "y", "Y", "yes", "YES", "Yes",
+		"on", "ON", "On", "ok", "OK", "Ok",
+		"enabled", "ENABLED", "Enabled",
+		"open", "OPEN", "Open":
 		return true, nil
-	case "0", "f", "F", "false", "FALSE", "False", "n", "N", "no", "NO", "No", "off", "OFF", "Off", "disable", "DISABLE", "Disable":
+	case "0", "f", "F", "false", "FALSE", "False", "n", "N", "no", "NO", "No",
+		"off", "OFF", "Off", "cancel", "CANCEL", "Cancel",
+		"disable", "DISABLE", "Disable",
+		"close", "CLOSE", "Close":
 		return false, nil
 	}
 	return false, fmt.Errorf("数据\"%s\"无法转换为bool", s)
