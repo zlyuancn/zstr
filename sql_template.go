@@ -92,23 +92,23 @@ func (m *sqlTemplate) calculateTemplate(ss []rune, start int) (int, int, bool, b
 	if !crust {
 		for i := start + 1; i < len(ss); i++ {
 			_, ok = templateVariableNameMap[ss[i]]
-			if !ok {
-				if i-start < 2 {
+			if !ok { // 表示查找变量结束了
+				if i-start < 2 || ss[i-1] == '.' { // 操作符占一个位置, 变量长度不可能为0
 					return m.calculateTemplate(ss, i)
 				}
-				return start, i, false, true
+				return start, i, false, true // 中间的数据就是需要的变量
 			}
 		}
-		return start, len(ss), false, len(ss)-start >= 2
+		// 可能整个字符串都是需要的数据
+		return start, len(ss), false, len(ss)-start >= 2 && ss[len(ss)-1] != '.'
 	}
 
-	if crust {
-		for i := start + 1; i < len(ss); i++ {
-			if ss[i] != '}' {
-				continue
-			}
-			return start, i + 1, true, true
+	// 以下包含{
+	for i := start + 1; i < len(ss); i++ {
+		if ss[i] != '}' {
+			continue
 		}
+		return start, i + 1, true, true
 	}
 	return 0, 0, false, false
 }
@@ -484,47 +484,51 @@ func (m *sqlTemplate) parseToSlice(a interface{}) []interface{} {
 // 语法格式:   {(操作符)(name) (选项)}
 //
 // 操作符:
-//     &: 转为 and name flag value
-//     |: 转为 or name flag value
-//     #: 转为 value, 自带 attention 选项, 仅支持以下格式
-//          (操作符)(name)
-//          {(操作符)(name)}
-//          {(操作符)(name) (选项)}
-//     @: attention 选项无效且自带 direct 选项, 且不会为字符串加上引号, 仅支持以下格式, 一般用于写入一条语句
-//          (操作符)(name)
-//          {(操作符)(name)}
-//          {(操作符)(name) (选项)}
 //
+//	&: 转为 and name flag value
+//	|: 转为 or name flag value
+//	#: 转为 value, 自带 attention 选项, 仅支持以下格式
+//	     (操作符)(name)
+//	     {(操作符)(name)}
+//	     {(操作符)(name) (选项)}
+//	@: attention 选项无效且自带 direct 选项, 且不会为字符串加上引号, 仅支持以下格式, 一般用于写入一条语句
+//	     (操作符)(name)
+//	     {(操作符)(name)}
+//	     {(操作符)(name) (选项)}
 //
 // name:   示例:    a   a2   a_2   a_2.b   a_2.b_2
 //
 // 标志:   >   >=   <   <=   !=   <>   =   in   notin   not_in   like   likestart    like_start   likeend   like_end
 //
 // 选项:
-//     a:   attention, 不会忽略参数值为该类型的零值
-//     d:   direct, 直接将值写入sql语句中
-//     m:   must, 必须传值, 值可以为零值
+//
+//	a:   attention, 不会忽略参数值为该类型的零值
+//	d:   direct, 直接将值写入sql语句中
+//	m:   must, 必须传值, 值可以为零值
 //
 // 输入的values必须为：map[string]string, map[string]interface{}，或按顺序传入值
 //
 // 寻值优先级:
-//    匹配名下标 > 匹配名 > *下标
-//    如:  a[0] > a > *[0]
+//
+//	匹配名下标 > 匹配名 > *下标
+//	如:  a[0] > a > *[0]
 //
 // 注意:
-//     一般情况下如果name没有传参或为该类型的零值, 则替换为空字符串
-//     如果name的值为nil, 不同的标志会转为不同的语句
-//     我们不会去检查name是否完全符合变量名标志, 因为这是无意义且消耗资源的
-//         变量名首位可以为数字, 变量中间可以连续出现多个小数点, 如 0..a 是合法的
+//
+//	一般情况下如果name没有传参或为该类型的零值, 则替换为空字符串
+//	如果name的值为nil, 不同的标志会转为不同的语句
+//	我们不会去检查name是否完全符合变量名标志, 因为这是无意义且消耗资源的
+//	    变量名首位可以为数字, 变量中间可以连续出现多个小数点, 如 0..a 是合法的
 //
 // 示例:
-//    s := SqlRender("select * from t where &a {&b} {&c !=} {&d in} {|e} limit 1", map[string]interface{}{
-//		"a": 1,
-//		"b[0]": "2",
-//		"*[2]": 3.3,
-//		"d": []string{"4"},
-//		"e": nil,
-//	  })
+//
+//	   s := SqlRender("select * from t where &a {&b} {&c !=} {&d in} {|e} limit 1", map[string]interface{}{
+//			"a": 1,
+//			"b[0]": "2",
+//			"*[2]": 3.3,
+//			"d": []string{"4"},
+//			"e": nil,
+//		  })
 func (m *sqlTemplate) sqlTemplateSyntaxParse(text string) (operation, name, flag, opts string, err error) {
 	// 去头去尾
 	temp := strings.TrimSpace(text)
