@@ -612,24 +612,24 @@ func (m *sqlTemplate) sqlTemplateSyntaxParse(text string) (operation, name, flag
 	return
 }
 
-// sql模板解析
+// sql模板解析, 和 SqlParse 一样, 只是加长了函数名
 func SqlTemplateParse(sql_template string, values ...interface{}) (sql_str string, names []string, args []interface{}) {
 	return newSqlTemplate(values).Parse(sql_template)
 }
 
-// sql模板解析, 和SqlTemplateParse一样, 只是简短了函数名
+// sql模板解析
 func SqlParse(sql_template string, values ...interface{}) (sql_str string, names []string, args []interface{}) {
 	return newSqlTemplate(values).Parse(sql_template)
 }
 
-// sql模板渲染
-//
-// 值会直接写入sql语句中, 不支持sql注入检查
+// sql模板渲染, 和 SqlRender 一样, 只是加长了函数名
 func SqlTemplateRender(sql_template string, values ...interface{}) string {
 	return newSqlTemplate(values).Render(sql_template)
 }
 
-// sql模板渲染, 和SqlTemplateRender一样, 只是简短了函数名
+// sql模板渲染(不推荐)
+//
+// 值会直接写入sql语句中, 不支持sql注入检查
 func SqlRender(sql_template string, values ...interface{}) string {
 	return newSqlTemplate(values).Render(sql_template)
 }

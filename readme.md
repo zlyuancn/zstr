@@ -1,22 +1,17 @@
 
-# 字符串工具, 模板渲染, 动态sql
+字符串转换工具, 类型转换工具, 模板渲染, 动态sql
 
 ---
 
 <!-- TOC -->
 
-- [字符串工具](#%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%B7%A5%E5%85%B7)
-    - [转为指定类型](#%E8%BD%AC%E4%B8%BA%E6%8C%87%E5%AE%9A%E7%B1%BB%E5%9E%8B)
-    - [扫描到变量](#%E6%89%AB%E6%8F%8F%E5%88%B0%E5%8F%98%E9%87%8F)
 - [转换函数](#%E8%BD%AC%E6%8D%A2%E5%87%BD%E6%95%B0)
-    - [Boolean支持](#boolean%E6%94%AF%E6%8C%81)
 - [扫描函数](#%E6%89%AB%E6%8F%8F%E5%87%BD%E6%95%B0)
-    - [将字符串扫描到指定变量](#%E5%B0%86%E5%AD%97%E7%AC%A6%E4%B8%B2%E6%89%AB%E6%8F%8F%E5%88%B0%E6%8C%87%E5%AE%9A%E5%8F%98%E9%87%8F)
-    - [将任何值扫描到指定变量](#%E5%B0%86%E4%BB%BB%E4%BD%95%E5%80%BC%E6%89%AB%E6%8F%8F%E5%88%B0%E6%8C%87%E5%AE%9A%E5%8F%98%E9%87%8F)
+- [字符串工具](#%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%B7%A5%E5%85%B7)
 - [模板渲染](#%E6%A8%A1%E6%9D%BF%E6%B8%B2%E6%9F%93)
     - [示例](#%E7%A4%BA%E4%BE%8B)
-    - [变量名](#%E5%8F%98%E9%87%8F%E5%90%8D)
-    - [模板渲染说明](#%E6%A8%A1%E6%9D%BF%E6%B8%B2%E6%9F%93%E8%AF%B4%E6%98%8E)
+    - [变量名定义](#%E5%8F%98%E9%87%8F%E5%90%8D%E5%AE%9A%E4%B9%89)
+    - [模板渲染函数](#%E6%A8%A1%E6%9D%BF%E6%B8%B2%E6%9F%93%E5%87%BD%E6%95%B0)
         - [变量名匹配](#%E5%8F%98%E9%87%8F%E5%90%8D%E5%8C%B9%E9%85%8D)
         - [变量名匹配优先级](#%E5%8F%98%E9%87%8F%E5%90%8D%E5%8C%B9%E9%85%8D%E4%BC%98%E5%85%88%E7%BA%A7)
         - [值](#%E5%80%BC)
@@ -39,43 +34,10 @@
 
 ---
 
-# 字符串工具
-
-```go
-// 转为zstr.String类型
-s := zstr.String("1")
-```
-
-## 转为指定类型
-
-```go
-s.String()      // 获取string
-s.GetBool()     // 获取bool
-s.GetInt()      // 获取int
-s.GetInt32()    // 获取int32
-s.GetUint64()   // 获取uint64
-s.GetFloat32()  // 获取float32
-s.Get...
-```
-
-## 扫描到变量
-
-输出变量不支持切片,数组,map,struct
-
-```go
-var a float64
-var b uint32
-var c bool
-var d string
-_ = s.Scan(&a)
-_ = s.Scan(&b)
-_ = s.Scan(&c)
-_ = s.Scan(&d)
-```
-
 # 转换函数
 
-输出变量不支持切片,数组,map,struct
+支持 `string`, `[]byte`, `bool`, `int`, `int8`, `int16`, `int32`, `int64`, `uint`, `uint8`, `uint16`, `uint32`, `uint64`, `float32`, `float64`.
+转换失败会返回该类型的零值.
 
 ```go
 zstr.GetString(1)       // 1
@@ -85,7 +47,16 @@ zstr.GetFloat32("3.2")  // 3.2
 zstr.Get...
 ```
 
-## Boolean支持
+转换失败时使用默认值
+
+```go
+zstr.GetBool("xxx", true)         // true
+zstr.GetInt("xxx", 1)       // 1
+zstr.GetFloat32("xxx", float32(3.2))  // 3.2
+zstr.Get...
+```
+
+Boolean转换说明
 
 ```text
 # 能转为true的数据
@@ -94,11 +65,13 @@ zstr.Get...
 nil, 0, f, F, false, FALSE, False, n, N, no, NO, No, off, OFF, Off, disable, DISABLE, Disable
 ```
 
+---
+
 # 扫描函数
 
-输出变量不支持切片,数组,map,struct
+支持 `string`, `[]byte`, `bool`, `int`, `int8`, `int16`, `int32`, `int64`, `uint`, `uint8`, `uint16`, `uint32`, `uint64`, `float32`, `float64`.
 
-## 将字符串扫描到指定变量
+将字符串扫描到指定变量
 
 ```
 var a float64
@@ -111,7 +84,7 @@ zstr.Scan("1", &c)  // true
 zstr.Scan("1", &d)  // 1
 ```
 
-## 将任何值扫描到指定变量
+将任何值扫描到指定变量
 
 ```
 var a float64
@@ -124,18 +97,75 @@ zstr.ScanAny("ok", &c)     // true
 zstr.ScanAny(1.23, &d)     // 1.23
 ```
 
+---
+
+# 字符串工具
+
+```go
+// 转为zstr.String类型
+s := zstr.String("1")
+```
+
+转为指定类型
+
+转换失败会返回该类型的零值.
+支持 `string`, `[]byte`, `bool`, `int`, `int8`, `int16`, `int32`, `int64`, `uint`, `uint8`, `uint16`, `uint32`, `uint64`, `float32`, `float64`
+
+```go
+s.String()      // 获取string
+s.GetBool()     // 获取bool
+s.GetInt()      // 获取int
+s.GetInt32()    // 获取int32
+s.GetUint64()   // 获取uint64
+s.GetFloat32()  // 获取float32
+s.Get...
+```
+
+转换失败时使用默认值
+
+```go
+s := zstr.String("xxx")
+s.GetBool(true)     // true
+s.GetInt(1)      // 1
+s.GetInt32(2)    // 2
+s.GetUint64(3)   // 3
+s.GetFloat32(4)  // 4
+s.Get...
+```
+
+扫描到变量
+
+支持 `string`, `[]byte`, `bool`, `int`, `int8`, `int16`, `int32`, `int64`, `uint`, `uint8`, `uint16`, `uint32`, `uint64`, `float32`, `float64`
+
+```go
+var a float64
+var b uint32
+var c bool
+var d string
+_ = s.Scan(&a)
+_ = s.Scan(&b)
+_ = s.Scan(&c)
+_ = s.Scan(&d)
+```
+
+---
+
 # 模板渲染
+
+将模板数据中的变量替换为指定数据
 
 ## 示例
 
 ```go
-Render("s@a e", map[string]string{"a": "va"})
-Render("s{@a}e", map[string]string{"a": "va"})
-Render("s{@a}e", "va")
-Render("s@a @a e", "va0", "va1")
+zstr.Render("{@a}e", "va") // 按顺序赋值
+zstr.Render("@a @a e", "va0", "va1") // 按顺序赋值
+zstr.Render("@a e", map[string]string{"a": "va"}) // 指定变量名赋值
+zstr.Render("@a @b @c", zstr.KV{"a", "aValue"}, zstr.KV{"b", "bValue"}, zstr.KV{"c", "cValue"}) // 指定变量名赋值
+zstr.Render("@a @b @c", zstr.KVs{{"a", "aValue"}, {"b", "bValue"}, {"c", "cValue"}}) // 指定变量名赋值
+zstr.Render("@a @a @a", zstr.KV{"a[0]", "1"}, zstr.KV{"a", "2"}) // 指定下标, 指定变量名+下标的优先级比指定变量名更高
 ```
 
-## 变量名
+## 变量名定义
 
 ```text
 模板变量用 @ 开头, 变量名支持 大小写字母; 数字; 下划线; 小数点;
@@ -149,7 +179,7 @@ Render("s@a @a e", "va0", "va1")
     @0...A
 ```
 
-## 模板渲染说明
+## 模板渲染函数
 
 ```go
 func Render(format string, values ...interface{}) string
@@ -159,17 +189,16 @@ func Render(format string, values ...interface{}) string
 
 ### 变量名匹配
 
-```text
-变量名带下标, 下标从0开始, 如: a[0]表示第一次出现的a, a[5]表示第6次出现的a.
-和变量名相等, 如: a;  a_b;  A.c;  a....c;  9;  0...A
-星号*可以匹配任何变量名, 但是必须和下标一起使用, 下标从0开始, 如: *[0]表示1个变量, *[5]表示第6个变量.
-```
+变量名带下标, 下标从 0 开始, 如: `a[0]` 表示第一次出现的 `a`, `a[5]`表示第 6 次出现的 `a`.
+星号 `*` 可以匹配任何变量名, 但是必须和下标一起使用, 下标从 0 开始, 如: `*[0]` 表示第 1 个变量, `*[5]` 表示第 6 个变量.
 
 ### 变量名匹配优先级
 
-1.  变量名带下标
+1.  变量名+下标
 2.  变量名
-3.  星号带下标
+3.  星号+下标
+
+如:  `a[0]` > `a` > `*[0]`
 
 ### 值
 > 参考 [MakeMapOfValues](./values_to_map.go)
@@ -182,10 +211,14 @@ func Render(format string, values ...interface{}) string
 
 ### 渲染
 
-```text
 模板渲染时遍历找出所有模板变量, 然后替换为匹配的变量值.
-如果模板变量未赋值则不会替换, 但是如果模板变量是被花括号`{}`包起来的, 会替换为空字符串.
-```
+
+如果未对模板中的变量进行赋值并且该变量被花括号`{}`包裹, 那么该会被替换为空字符串.
+
+比如 `zstr.Render("@a @b {@c}", zstr.KVs{{"a", "aValue"}, {"b", "bValue"}})` 未对变量 `c` 进行赋值, 其输出结果为 `aValue bValue `.
+但是 `zstr.Render("@a @b @c", zstr.KVs{{"a", "aValue"}, {"b", "bValue"}})` 输出结果为 `aValue bValue @c`, 因为变量 `c` 没有被花括号`{}`包裹
+
+---
 
 # 动态sql
 
@@ -271,9 +304,9 @@ like_end  likeend
 
 ### 选项
 
-+ attention, 语法 a, 不会忽略参数值为该类型的零值
-+ direct, 语法 d, 直接将值写入sql语句中
-+ must, 语法 m, 必须传值
++ attention, 语法 a, 不会忽略参数值为该类型的零值. 表示该条件必须存在
++ direct, 语法 d, 直接将值写入sql语句中. 一般用于表示一段语句, 建议别用于表示一个值, 否则可能导致sql注入危险.
++ must, 语法 m, 必须传值, 否则会panic
 
 ## 模板渲染说明
 
@@ -285,19 +318,19 @@ func SqlRender(sql_template string, values ...interface{}) string
 
 ### 变量名匹配
 
-```text
-变量名带下标, 下标从0开始, 如: a[0]表示第一次出现的a, a[5]表示第6次出现的a.
-和变量名相等, 如: a;  a_b;  A.c;  a....c;  9;  0...A
-星号*可以匹配任何变量名, 但是必须和下标一起使用, 下标从0开始, 如: *[0]表示1个变量, *[5]表示第6个变量.
-```
+变量名带下标, 下标从 0 开始, 如: `a[0]` 表示第一次出现的 `a`, `a[5]`表示第 6 次出现的 `a`.
+星号 `*` 可以匹配任何变量名, 但是必须和下标一起使用, 下标从 0 开始, 如: `*[0]` 表示第 1 个变量, `*[5]` 表示第 6 个变量.
 
 ### 变量名匹配优先级
 
-1.  变量名带下标
+1.  变量名+下标
 2.  变量名
-3.  星号带下标
+3.  星号+下标
+
+如:  `a[0]` > `a` > `*[0]`
 
 ### 值
+
 > 参考 [MakeMapOfValues](./values_to_map.go)
 
 ```text
@@ -308,13 +341,15 @@ func SqlRender(sql_template string, values ...interface{}) string
 
 ### 渲染
 
-> 渲染文本之前会缩进文本所有的空格, 所以要渲染的文本一般为单纯的sql语句, 不要将值写在文本中, 而是使用传参的概念, 这是使用sql的标准姿势
+**渲染文本之前会缩进文本所有的空格, 所以要渲染的文本一般为单纯的sql语句, 不要将值写在文本中, 而是使用传参的方式, 这是使用sql的标准姿势**
 
 ```text
 模板渲染时遍历找出所有模板语法, 然后按语法替换为不同的值.
 一般情况下如果变量没有传参或为该类型的零值, 则替换为空字符串.
 如果变量的值为nil, 不同的标志会转为不同的语句.
 ```
+
+---
 
 # 模板渲染和动态sql性能说明
 

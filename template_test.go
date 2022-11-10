@@ -12,7 +12,10 @@ import (
 	"testing"
 )
 
-const testSql = `
+const testShortSql = `
+select * from a where $a $b $c
+`
+const testLongSql = `
 select * from a where
 {&u.phone_number like}
     {&u.user_name like}
@@ -51,32 +54,57 @@ var testData = map[string]interface{}{
 	"start_time[1]":    "st1",
 	"end_time[1]":      "et[1]",
 	"a[0]":             "av0",
+	"b":                "bv",
 	"b[1]":             "bv0",
 	"d":                "dv",
 	"e[0]":             []string{"ev0", "ev1"},
 	"g":                "gv",
 }
 
-func BenchmarkRender(b *testing.B) {
+func BenchmarkRenderShort(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_ = Render(testSql, testData)
+			_ = Render(testShortSql, testData)
 		}
 	})
 }
 
-func BenchmarkSqlRender(b *testing.B) {
+func BenchmarkSqlRenderShort(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_ = SqlRender(testSql, testData)
+			_ = SqlRender(testShortSql, testData)
 		}
 	})
 }
 
-func BenchmarkSqlParse(b *testing.B) {
+func BenchmarkSqlParseShort(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_, _, _ = SqlParse(testSql, testData)
+			_, _, _ = SqlParse(testShortSql, testData)
+		}
+	})
+}
+
+func BenchmarkRenderLong(b *testing.B) {
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_ = Render(testLongSql, testData)
+		}
+	})
+}
+
+func BenchmarkSqlRenderLong(b *testing.B) {
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_ = SqlRender(testLongSql, testData)
+		}
+	})
+}
+
+func BenchmarkSqlParseLong(b *testing.B) {
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, _, _ = SqlParse(testLongSql, testData)
 		}
 	})
 }

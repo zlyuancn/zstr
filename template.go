@@ -147,31 +147,33 @@ func (m *simpleTemplate) Render(format string) string {
 	return result
 }
 
-// 模板渲染
-//
-// 输入的values必须为：map[string]string，map[string]interface{}，或按顺序传入值
-// 示例:
-//
-//	s:=Render("s@a e", map[string]string{"a": "va"})
-//	s:=Render("s{@a}e", map[string]string{"a": "va"})
-//	s:=Render("s{@a}e", "va")
-//	s:=Render("s@a @a e", "va0", "va1")
-//
-// 寻值优先级:
-//
-//	匹配名下标 > 匹配名 > *下标
-//	如:  a[0] > a > *[0]
-//
-// 注意:
-//
-//	如果name存在花括号外壳{}且没有传参, 则替换为空字符串
-//	我们不会去检查name是否完全符合变量名标志, 因为这是无意义且消耗资源的
-//	    变量名首位可以为数字, 变量中间可以连续出现多个小数点, 如 0..a 是合法的
+// 模板渲染, 和Render一样, 只是加长了函数名
 func TemplateRender(format string, values ...interface{}) string {
 	return newSimpleTemplate(values...).Render(format)
 }
 
-// 模板渲染, 和TemplateRender一样, 只是简短了函数名
+/*
+模板渲染
+
+示例:
+
+	zstr.Render("{@a}e", "va") // 按顺序赋值
+	zstr.Render("@a @a e", "va0", "va1") // 按顺序赋值
+	zstr.Render("@a e", map[string]string{"a": "va"}) // 指定变量名赋值
+	zstr.Render("@a @b @c", zstr.KV{"a", "aValue"}, zstr.KV{"b", "bValue"}, zstr.KV{"c", "cValue"}) // 指定变量名赋值
+	zstr.Render("@a @b @c", zstr.KVs{{"a", "aValue"}, {"b", "bValue"}, {"c", "cValue"}}) // 指定变量名赋值
+	zstr.Render("@a @a @a", zstr.KV{"a[0]", "1"}, zstr.KV{"a", "2"}) // 指定下标, 指定变量名+下标的优先级比指定变量名更高
+
+寻值优先级
+ 1. 变量名+下标
+ 2. 变量名
+ 3. 星号+下标
+    如:  `a[0]` > `a` > `*[0]`
+
+注意:
+
+	如果未对模板中的变量进行赋值并且该变量被花括号`{}`包裹, 那么该会被替换为空字符串.
+*/
 func Render(format string, values ...interface{}) string {
 	return newSimpleTemplate(values...).Render(format)
 }
