@@ -613,23 +613,23 @@ func (m *sqlTemplate) sqlTemplateSyntaxParse(text string) (operation, name, flag
 }
 
 // sql模板解析, 和 SqlParse 一样, 只是加长了函数名
-func SqlTemplateParse(sql_template string, values ...interface{}) (sql_str string, names []string, args []interface{}) {
-	return newSqlTemplate(values).Parse(sql_template)
+func SqlTemplateParse(sqlTemplate string, values ...interface{}) (sql_str string, names []string, args []interface{}) {
+	return newSqlTemplate(values).Parse(sqlTemplate)
 }
 
 // sql模板解析
-func SqlParse(sql_template string, values ...interface{}) (sql_str string, names []string, args []interface{}) {
-	return newSqlTemplate(values).Parse(sql_template)
+func SqlParse(sqlTemplate string, values ...interface{}) (sql_str string, names []string, args []interface{}) {
+	return newSqlTemplate(values).Parse(sqlTemplate)
 }
 
 // sql模板渲染, 和 SqlRender 一样, 只是加长了函数名
-func SqlTemplateRender(sql_template string, values ...interface{}) string {
-	return newSqlTemplate(values).Render(sql_template)
+func SqlTemplateRender(sqlTemplate string, values ...interface{}) string {
+	return newSqlTemplate(values).Render(sqlTemplate)
 }
 
 // sql模板渲染(不推荐)
 //
 // 值会直接写入sql语句中, 不支持sql注入检查
-func SqlRender(sql_template string, values ...interface{}) string {
-	return newSqlTemplate(values).Render(sql_template)
+func SqlRender(sqlTemplate string, values ...interface{}) string {
+	return newSqlTemplate(values).Render(sqlTemplate)
 }

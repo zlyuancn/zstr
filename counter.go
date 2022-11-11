@@ -14,12 +14,13 @@ type counter struct {
 	def  int // 默认值
 }
 
-func newCounter(def ...int) *counter {
+// 创建一个计数器, 非线程安全
+func newCounter(initValue ...int) *counter {
 	c := &counter{
 		data: make(map[string]int),
 	}
-	if len(def) > 0 {
-		c.def = def[0]
+	if len(initValue) > 0 {
+		c.def = initValue[0]
 	}
 	return c
 }

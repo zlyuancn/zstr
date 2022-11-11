@@ -164,6 +164,12 @@ func TemplateRender(format string, values ...interface{}) string {
 	zstr.Render("@a @b @c", zstr.KVs{{"a", "aValue"}, {"b", "bValue"}, {"c", "cValue"}}) // 指定变量名赋值
 	zstr.Render("@a @a @a", zstr.KV{"a[0]", "1"}, zstr.KV{"a", "2"}) // 指定下标, 指定变量名+下标的优先级比指定变量名更高
 
+	type AA struct {
+		A int
+		B int `render:"b"`
+	}
+	s := zstr.Render(`@A @b`, AA{1, 2})
+
 寻值优先级
  1. 变量名+下标
  2. 变量名
