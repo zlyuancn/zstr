@@ -12,6 +12,15 @@ import (
 	"testing"
 )
 
+const testShort = `a=@a b={@b}`
+
+const testLong = `balabalabalabalabalabalabalabalabal
+balabalabalabala  @a    balabalabalabalabalabalabalab
+balabalabalabalabalab  {@b}   labalabalabalabalabalab
+balabalab  {@c}   alabalaalabala @a @c abalabalabalab
+balabalabalabalabalabalabalabalabalabalabalabalabalab
+balabalabalabalab  {@d}   labalabalabalabalabalabalab`
+
 const testShortSql = `
 select * from a where $a $b $c
 `
@@ -64,7 +73,7 @@ var testData = map[string]interface{}{
 func BenchmarkRenderShort(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_ = Render(testShortSql, testData)
+			_ = Render(testShort, testData)
 		}
 	})
 }
@@ -88,7 +97,7 @@ func BenchmarkSqlParseShort(b *testing.B) {
 func BenchmarkRenderLong(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_ = Render(testLongSql, testData)
+			_ = Render(testLong, testData)
 		}
 	})
 }
