@@ -117,24 +117,26 @@ func BenchmarkSqlParseLong(b *testing.B) {
 		}
 	})
 }
+
 func TestReplaceTemplateVars(t *testing.T) {
 	data := map[string]string{
 		"name":  "John",
 		"age":   "30",
 		"email": "john@example.com",
-		"x[2]": "X",
+		"x[2]":  "X",
 	}
 
 	cases := []struct {
 		input    string
 		expected string
 	}{
-		//{"Hello, {@name}!", "Hello, John!"},
-		//{"{@name} is {@age} years old.", "John is 30 years old."},
-		//{"Contact me at {@email}.", "Contact me at john@example.com."},
-		//{"{@foo} {@bar} {@baz}", "  "},
-		//{"{@name}{@age}{@email}", "John30john@example.com"},
-		//{"{@name} {@age} {@email} {@foo}", "John 30 john@example.com "},
+		{"Hello, { @name}!", "Hello, John!"},
+		{"{@name} is {@age } years old.", "John is 30 years old."},
+		{"Contact me at { @email }.", "Contact me at john@example.com."},
+		{"{ @foo } {@bar} {@baz}", "  "},
+		{"{ @name }{@age}{@email}", "John30john@example.com"},
+		{"{@name} {@age} {@email} {@foo}", "John 30 john@example.com "},
+		{"{@name} { @ age } {@email} {@foo}", "John { @ age } john@example.com "},
 		{"{@x} @x @x", " @x X"},
 	}
 

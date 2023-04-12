@@ -166,15 +166,15 @@ zstr.Render("@a @a e", "va0", "va1") // 按顺序赋值
 zstr.Render("@a e", map[string]string{"a": "va"}) // 指定变量名赋值
 zstr.Render("@a @b @c", zstr.KV{"a", "aValue"}, zstr.KV{"b", "bValue"}, zstr.KV{"c", "cValue"}) // 指定变量名赋值
 zstr.Render("@a @b @c", zstr.KVs{{"a", "aValue"}, {"b", "bValue"}, {"c", "cValue"}}) // 指定变量名赋值
-zstr.Render("@a @a @a", zstr.KV{"a[0]", "1"}, zstr.KV{"a", "2"}) // 指定下标, 指定变量名+下标的优先级比指定变量名更高
+zstr.Render("@a @a @a", zstr.KV{"a[0]", "1"}, zstr.KV{"a", "2"}) // 指定变量名下标的优先级比指定变量名更高
 ```
 
 ## 变量名定义
 
 
 模板变量用 `@` 开头
-模板变量推荐使用花括号`{}`包起来, 这样能精确的界定模板变量的开头和结尾. 注意花括号内不能有空格.
-示例:  `@a`,  `@a_b`,  `@A.c`,  `{@a....c}`,  `{@9}`,  `@0...A`
+模板变量推荐使用花括号`{}`包起来, 这样能精确的界定模板变量的开头和结尾. 注意花括号内可以有空格.
+示例:  `@a`,  `@a_b`,  `@A.c`,  `{@a....c}`,  `{@9}`,  `@0...A`, `{ @a }`, `{ @a}`, `{@a }`, `{    @a    }`
 
 
 变量细节参考 [变量](#变量)
@@ -183,10 +183,10 @@ zstr.Render("@a @a @a", zstr.KV{"a[0]", "1"}, zstr.KV{"a", "2"}) // 指定下标
 
 模板渲染时遍历找出所有模板变量, 然后替换为匹配的变量值.
 
-如果未对模板中的变量进行赋值并且该变量被花括号`{}`包裹, 那么该会被替换为空字符串.
+未对变量赋值时, 如果变量被花括号`{}`包裹, 那么会被替换为空字符串, 否则不会替换数据
 
-比如 `zstr.Render("@a @b {@c}", zstr.KVs{{"a", "aValue"}, {"b", "bValue"}})` 未对变量 `c` 进行赋值, 其输出结果为 `aValue bValue `.
-但是 `zstr.Render("@a @b @c", zstr.KVs{{"a", "aValue"}, {"b", "bValue"}})` 输出结果为 `aValue bValue @c`, 因为变量 `c` 没有被花括号`{}`包裹
+比如 `zstr.Render("@a {@b}", zstr.KV{"a", "aValue"})` 未对变量 `b` 进行赋值, 其输出结果为 `aValue `.
+但是 `zstr.Render("@a @b", zstr.KV{"a", "aValue"})` 输出结果为 `aValue @b`, 因为变量 `b` 没有被花括号`{}`包裹
 
 ---
 

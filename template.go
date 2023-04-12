@@ -42,7 +42,7 @@ var templateVariableNameMap = func() map[int32]struct{} {
 	return mm
 }()
 
-func (m *simpleTemplate) calculateTemplate(ss []rune, start int) (int, int, bool, bool) {
+func (m *simpleTemplate) calculateTemplate(ss []rune, start int) (int, int, string, bool, bool) {
 	var crust, has bool
 	// 查找开头
 	for i := start; i < len(ss); i++ {
@@ -56,12 +56,12 @@ func (m *simpleTemplate) calculateTemplate(ss []rune, start int) (int, int, bool
 		}
 	}
 	if !has {
-		return 0, 0, false, false
+		return 0, 0, "", false, false
 	}
 
 	// 预检
 	if crust && (len(ss)-start < 4) || (len(ss)-start < 2) {
-		return 0, 0, false, false
+		return 0, 0, "", false, false
 	}
 
 	var ok bool
@@ -72,19 +72,38 @@ func (m *simpleTemplate) calculateTemplate(ss []rune, start int) (int, int, bool
 				if i-start < 2 || ss[start+1] == '.' || ss[i-1] == '.' { // 操作符占一个位置, 变量长度不可能为0
 					return m.calculateTemplate(ss, i)
 				}
-				return start, i, false, true // 中间的数据就是需要的数据
+				return start, i, string(ss[start+1 : i]), false, true // 中间的数据就是需要的数据
 			}
 		}
 		// 可能整个字符串都是需要的数据
-		return start, len(ss), false, len(ss)-start >= 2 && ss[start+1] != '.' && ss[len(ss)-1] != '.'
+		return start, len(ss), string(ss[start+1:]), false, len(ss)-start >= 2 && ss[start+1] != '.' && ss[len(ss)-1] != '.'
 	}
 
 	// 以下包含{
-	if ss[start+1] != '@' {
-		return m.calculateTemplate(ss, start+1)
-	}
-	for i := start + 2; i < len(ss); i++ {
-		if ss[i] != '}' {
+	var variableStart, variableEnd, end int
+	for i := start + 1; i < len(ss); i++ {
+		if variableStart == 0 {
+			if ss[i] == '@' {
+				variableStart = i + 1
+				continue
+			}
+			if ss[i] == ' ' {
+				continue
+			}
+			// {}中间出现非预期的字符, 从这里开始重新扫描
+			return m.calculateTemplate(ss, i)
+		}
+
+		if variableEnd == 0 {
+			if ss[i] == '}' {
+				variableEnd = i
+				end = i + 1
+				break
+			}
+			if ss[i] == ' ' {
+				variableEnd = i
+				continue
+			}
 			_, ok = templateVariableNameMap[ss[i]]
 			if ok {
 				continue
@@ -92,20 +111,29 @@ func (m *simpleTemplate) calculateTemplate(ss []rune, start int) (int, int, bool
 			// {}中间出现非预期的字符, 从这里开始重新扫描
 			return m.calculateTemplate(ss, i)
 		}
-		// 这里是}结束标志
-		if i-start < 3 || !has || ss[start+2] == '.' || ss[i-1] == '.' {
-			return m.calculateTemplate(ss, i+1)
+
+		if ss[i] == '}' {
+			end = i + 1
+			break
 		}
-		return start, i + 1, true, true
+		if ss[i] == ' ' {
+			continue
+		}
+		// {}中间出现非预期的字符, 从这里开始重新扫描
+		return m.calculateTemplate(ss, i)
 	}
-	return 0, 0, false, false
+	if end == 0 || variableStart >= variableEnd || ss[variableStart] == '.' || ss[variableEnd-1] == '.' {
+		return 0, 0, "", false, false
+	}
+
+	return start, end, string(ss[variableStart:variableEnd]), true, true
 }
 
 func (m *simpleTemplate) replaceAllFunc(s string, fn func(full string, variable string, crust bool) string) string {
 	ss := []rune(s)
 	var buff bytes.Buffer
 	for offset := 0; offset < len(ss); {
-		start, end, crust, has := m.calculateTemplate(ss, offset)
+		start, end, variable, crust, has := m.calculateTemplate(ss, offset)
 		if !has {
 			buff.WriteString(string(ss[offset:]))
 			break
@@ -113,9 +141,9 @@ func (m *simpleTemplate) replaceAllFunc(s string, fn func(full string, variable 
 
 		buff.WriteString(string(ss[offset:start]))
 		if crust {
-			buff.WriteString(fn(string(ss[start:end]), string(ss[start+2:end-1]), crust))
+			buff.WriteString(fn(string(ss[start:end]), variable, crust))
 		} else {
-			buff.WriteString(fn(string(ss[start:end]), string(ss[start+1:end]), crust))
+			buff.WriteString(fn(string(ss[start:end]), variable, crust))
 		}
 		offset = end
 	}
@@ -154,9 +182,8 @@ func TemplateRender(format string, values ...interface{}) string {
 
 示例:
 
-	zstr.Render("{@a}e", "va") // 按顺序赋值
-	zstr.Render("@a @a e", "va0", "va1") // 按顺序赋值
-	zstr.Render("@a e", map[string]string{"a": "va"}) // 指定变量名赋值
+	zstr.Render("{@a} { @b } @c text", "va", "vb", "vc") // 按顺序赋值
+	zstr.Render("@a text", map[string]string{"a": "va"}) // 指定变量名赋值
 	zstr.Render("@a @b @c", zstr.KV{"a", "aValue"}, zstr.KV{"b", "bValue"}, zstr.KV{"c", "cValue"}) // 指定变量名赋值
 	zstr.Render("@a @b @c", zstr.KVs{{"a", "aValue"}, {"b", "bValue"}, {"c", "cValue"}}) // 指定变量名赋值
 	zstr.Render("@a @a @a", zstr.KV{"a[0]", "1"}, zstr.KV{"a", "2"}) // 指定下标, 指定变量名+下标的优先级比指定变量名更高
