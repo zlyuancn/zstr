@@ -36,7 +36,8 @@ func ToBool(any interface{}) (bool, error) {
 	case "0", "f", "F", "false", "FALSE", "False", "n", "N", "no", "NO", "No",
 		"off", "OFF", "Off", "cancel", "CANCEL", "Cancel",
 		"disable", "DISABLE", "Disable",
-		"close", "CLOSE", "Close":
+		"close", "CLOSE", "Close",
+		"", "nil", "Nil", "NIL", "null", "Null", "NULL", "none", "None", "NONE":
 		return false, nil
 	}
 	return false, fmt.Errorf("数据\"%s\"无法转换为bool", s)
