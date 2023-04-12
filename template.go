@@ -101,7 +101,7 @@ func (m *simpleTemplate) calculateTemplate(ss []rune, start int) (int, int, bool
 	return 0, 0, false, false
 }
 
-func (m *simpleTemplate) replaceAllFunc(s string, fn func(s string, crust bool) string) string {
+func (m *simpleTemplate) replaceAllFunc(s string, fn func(full string, variable string, crust bool) string) string {
 	ss := []rune(s)
 	var buff bytes.Buffer
 	for offset := 0; offset < len(ss); {
@@ -112,7 +112,11 @@ func (m *simpleTemplate) replaceAllFunc(s string, fn func(s string, crust bool) 
 		}
 
 		buff.WriteString(string(ss[offset:start]))
-		buff.WriteString(fn(string(ss[start:end]), crust))
+		if crust {
+			buff.WriteString(fn(string(ss[start:end]), string(ss[start+2:end-1]), crust))
+		} else {
+			buff.WriteString(fn(string(ss[start:end]), string(ss[start+1:end]), crust))
+		}
 		offset = end
 	}
 	return buff.String()
@@ -120,17 +124,10 @@ func (m *simpleTemplate) replaceAllFunc(s string, fn func(s string, crust bool) 
 
 func (m *simpleTemplate) Render(format string) string {
 	// 替换 {@field} 和 @field, 如果没有设置则不替换
-	result := m.replaceAllFunc(format, func(s string, crust bool) string {
-		var key string
-		if crust {
-			key = s[2 : len(s)-1]
-		} else {
-			key = s[1:]
-		}
-
-		v, ok := m.data[key+"["+strconv.Itoa(m.keyCounter.Incr(key))+"]"]
+	result := m.replaceAllFunc(format, func(full string, variable string, crust bool) string {
+		v, ok := m.data[variable+"["+strconv.Itoa(m.keyCounter.Incr(variable))+"]"]
 		if !ok {
-			v, ok = m.data[key]
+			v, ok = m.data[variable]
 		}
 		if !ok {
 			v, ok = m.data["*["+strconv.Itoa(m.sub)+"]"]
@@ -142,7 +139,7 @@ func (m *simpleTemplate) Render(format string) string {
 		if crust {
 			return ""
 		}
-		return s
+		return full
 	})
 	return result
 }
